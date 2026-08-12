@@ -1,0 +1,429 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Admin {
+  id           String         @id @default(cuid())
+  email        String         @unique
+  passwordHash String
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+  sessions     AdminSession[]
+}
+
+model AdminSession {
+  id        String   @id @default(cuid())
+  token     String   @unique
+  adminId   String
+  ipAddress String?
+  userAgent String?
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  admin Admin @relation(fields: [adminId], references: [id], onDelete: Cascade)
+}
+
+model RateLimit {
+  id           String    @id @default(cuid())
+  ip           String    @unique
+  attempts     Int       @default(0)
+  lockoutUntil DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  action    String   // e.g. LOGIN_SUCCESS, LOGIN_FAILED, LOGOUT
+  ipAddress String?
+  userAgent String?
+  details   String?  // Optional extra info like email attempted
+  createdAt DateTime @default(now())
+}
+
+model Post {
+  id             String   @id @default(cuid())
+  title          String
+  slug           String   @unique
+  shortDesc      String?
+  content        String?  @db.Text
+  featuredImage  String?
+  galleryUrls    String[]
+  videoUrl       String?
+  instagramUrl   String?
+  youtubeUrl     String?
+  platform       Platform
+  publishDate    DateTime @default(now())
+  
+  // Basic SEO
+  seoTitle       String?
+  seoDescription String?
+  canonicalUrl   String?
+  keywords       String?
+  
+  // Open Graph
+  ogImage        String?
+  ogTitle        String?
+  ogDescription  String?
+  
+  // Twitter
+  twitterImage       String?
+  twitterTitle       String?
+  twitterDescription String?
+  
+  // Advanced SEO & UX
+  noindex        Boolean  @default(false)
+  nofollow       Boolean  @default(false)
+  readingTime    Int?     // in minutes
+  
+  status         Status   @default(DRAFT)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  tags       Tag[]      @relation("PostTags")
+  categories Category[] @relation("PostCategories")
+  comments   Comment[]
+}
+
+model Category {
+  id          String     @id @default(cuid())
+  name        String     @unique
+  slug        String     @unique
+  description String?
+  
+  parentId    String?
+  parent      Category?  @relation("CategoryHierarchy", fields: [parentId], references: [id])
+  children    Category[] @relation("CategoryHierarchy")
+
+  posts       Post[]     @relation("PostCategories")
+  
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+}
+
+model Tag {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  slug      String   @unique
+  createdAt DateTime @default(now())
+  posts     Post[]   @relation("PostTags")
+}
+
+model Comment {
+  id          String        @id @default(cuid())
+  content     String        @db.Text
+  authorName  String
+  authorEmail String?
+  status      CommentStatus @default(PENDING)
+  
+  postId      String
+  post        Post          @relation(fields: [postId], references: [id], onDelete: Cascade)
+  
+  parentId    String?
+  parent      Comment?      @relation("CommentReplies", fields: [parentId], references: [id])
+  replies     Comment[]     @relation("CommentReplies")
+  
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+}
+
+model Media {
+  id        String   @id @default(cuid())
+  url       String
+  publicId  String   @unique
+  format    String?
+  width     Int?
+  height    Int?
+  bytes     Int?
+  folder    String?  @default("general")
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Setting {
+  key       String   @id
+  value     String   @db.Text
+  updatedAt DateTime @updatedAt
+}
+
+model PageVisit {
+  id        String   @id @default(cuid())
+  path      String
+  ipHash    String?  // Anonymized IP hash
+  userAgent String?
+  referer   String?
+  timestamp DateTime @default(now())
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// AUTOMATIONS MARKETPLACE
+// ─────────────────────────────────────────────────────────────────────────────
+
+/// An automation product for sale in the marketplace.
+/// All monetary amounts stored in the smallest currency unit (paise for INR).
+model Automation {
+  id              String              @id @default(cuid())
+  slug            String              @unique
+  title           String
+  shortDesc       String?
+  description     String?             @db.Text
+  features        String[]
+  requirements    String[]
+
+  // Pricing — stored in paise (1 INR = 100 paise) to avoid float arithmetic
+  price           Int                 // current selling price in paise
+  originalPrice   Int?                // original / crossed-out price in paise
+  discountPercent Int?                // convenience field (not used for calculation)
+  currency        String              @default("INR")
+
+  categoryId      String?
+  category        AutomationCategory? @relation(fields: [categoryId], references: [id])
+
+  thumbnailUrl    String?             // primary thumbnail for cards
+  status          AutomationStatus    @default(DRAFT)
+
+  // Denormalized counters for fast sort — updated on review create/delete
+  ratingSum       Int                 @default(0)
+  reviewCount     Int                 @default(0)
+
+  createdAt       DateTime            @default(now())
+  updatedAt       DateTime            @updatedAt
+
+  media           AutomationMedia[]
+  reviews         AutomationReview[]
+  comments        AutomationComment[]
+  cartItems       CartItem[]
+  wishlistItems   WishlistItem[]
+  orderItems      OrderItem[]
+}
+
+/// Images and videos attached to an automation product.
+model AutomationMedia {
+  id           String     @id @default(cuid())
+  automationId String
+  automation   Automation @relation(fields: [automationId], references: [id], onDelete: Cascade)
+
+  url          String
+  publicId     String    @unique
+  type         MediaType @default(IMAGE)
+  format       String?
+  sortOrder    Int       @default(0)
+  isPrimary    Boolean   @default(false)
+
+  createdAt    DateTime  @default(now())
+}
+
+/// Taxonomy categories for filtering automations.
+model AutomationCategory {
+  id          String       @id @default(cuid())
+  name        String       @unique
+  slug        String       @unique
+  description String?
+
+  automations Automation[]
+
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// CART  (Clerk userId as external key — no Clerk tables stored in DB)
+// ─────────────────────────────────────────────────────────────────────────────
+
+model Cart {
+  id          String     @id @default(cuid())
+  clerkUserId String     @unique  // Clerk user_id
+  items       CartItem[]
+
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+}
+
+model CartItem {
+  id           String     @id @default(cuid())
+  cartId       String
+  cart         Cart       @relation(fields: [cartId], references: [id], onDelete: Cascade)
+
+  automationId String
+  automation   Automation @relation(fields: [automationId], references: [id], onDelete: Cascade)
+
+  quantity     Int        @default(1)
+
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  @@unique([cartId, automationId])
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// WISHLIST
+// ─────────────────────────────────────────────────────────────────────────────
+
+model Wishlist {
+  id          String         @id @default(cuid())
+  clerkUserId String         @unique
+  items       WishlistItem[]
+
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+}
+
+model WishlistItem {
+  id           String     @id @default(cuid())
+  wishlistId   String
+  wishlist     Wishlist   @relation(fields: [wishlistId], references: [id], onDelete: Cascade)
+
+  automationId String
+  automation   Automation @relation(fields: [automationId], references: [id], onDelete: Cascade)
+
+  createdAt    DateTime   @default(now())
+
+  @@unique([wishlistId, automationId])
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// ORDERS & PAYMENTS
+// ─────────────────────────────────────────────────────────────────────────────
+
+model Order {
+  id                String        @id @default(cuid())
+  clerkUserId       String
+
+  totalAmount       Int           // in paise
+  currency          String        @default("INR")
+
+  status            OrderStatus   @default(PENDING)
+  paymentStatus     PaymentStatus @default(PENDING)
+
+  // Razorpay data — all server-set, never from browser
+  razorpayOrderId   String?       @unique
+  razorpayPaymentId String?       @unique
+  razorpaySignature String?
+
+  items             OrderItem[]
+
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+
+  @@index([clerkUserId])
+}
+
+/// Snapshot of purchased product — preserves price/title even if product changes.
+model OrderItem {
+  id            String     @id @default(cuid())
+  orderId       String
+  order         Order      @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  automationId  String
+  automation    Automation @relation(fields: [automationId], references: [id])
+
+  // Snapshots at time of purchase
+  titleSnapshot String
+  priceSnapshot Int        // in paise
+  quantity      Int        @default(1)
+
+  createdAt     DateTime   @default(now())
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// REVIEWS (one per user per product, enforced by unique constraint)
+// ─────────────────────────────────────────────────────────────────────────────
+
+model AutomationReview {
+  id             String     @id @default(cuid())
+  clerkUserId    String
+  clerkUserName  String?    // cached display name
+  clerkUserImage String?    // cached avatar URL
+
+  automationId   String
+  automation     Automation @relation(fields: [automationId], references: [id], onDelete: Cascade)
+
+  rating         Int        // 1–5
+  body           String?    @db.Text
+
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
+
+  @@unique([clerkUserId, automationId])
+  @@index([automationId])
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// COMMENTS on automation products
+// ─────────────────────────────────────────────────────────────────────────────
+
+model AutomationComment {
+  id             String              @id @default(cuid())
+  clerkUserId    String
+  clerkUserName  String?
+  clerkUserImage String?
+
+  automationId   String
+  automation     Automation          @relation(fields: [automationId], references: [id], onDelete: Cascade)
+
+  content        String              @db.Text
+
+  parentId       String?
+  parent         AutomationComment?  @relation("AutomationCommentReplies", fields: [parentId], references: [id])
+  replies        AutomationComment[] @relation("AutomationCommentReplies")
+
+  createdAt      DateTime            @default(now())
+  updatedAt      DateTime            @updatedAt
+
+  @@index([automationId])
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// ENUMS
+// ─────────────────────────────────────────────────────────────────────────────
+
+enum Platform {
+  INSTAGRAM
+  YOUTUBE
+}
+
+enum Status {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
+enum CommentStatus {
+  PENDING
+  APPROVED
+  SPAM
+  REJECTED
+}
+
+enum AutomationStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
+enum MediaType {
+  IMAGE
+  VIDEO
+}
+
+enum OrderStatus {
+  PENDING
+  CONFIRMED
+  CANCELLED
+  REFUNDED
+}
+
+enum PaymentStatus {
+  PENDING
+  PAID
+  FAILED
+  REFUNDED
+}

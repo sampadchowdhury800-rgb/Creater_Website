@@ -1,0 +1,327 @@
+@import "tailwindcss";
+@plugin "@tailwindcss/typography";
+@config "../tailwind.config.ts";
+@custom-variant dark (&:is(.dark *));
+/* ── Google Fonts are loaded via next/font in layout.tsx ── */
+
+/* ─────────────────────────────────────────────────────────────────────────
+   Material Symbols variable font settings
+───────────────────────────────────────────────────────────────────────── */
+.material-symbols-outlined {
+  font-variation-settings: "FILL" 0, "wght" 400, "GRAD" 0, "opsz" 24;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+   Glass border utility
+───────────────────────────────────────────────────────────────────────── */
+.glass-border {
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  border-left: 1px solid rgba(255, 255, 255, 0.1);
+}
+.light .glass-border {
+  border-top: 1px solid rgba(0, 0, 0, 0.05);
+  border-left: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+   Base body styles
+───────────────────────────────────────────────────────────────────────── */
+body {
+  background-color: #131313;
+  color: #e5e2e1;
+  overflow-x: hidden;
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+.light body {
+  background-color: #f8f9fa;
+  color: #1a1c1c;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+   Hero gradients / light streaks
+───────────────────────────────────────────────────────────────────────── */
+.hero-gradient {
+  background: radial-gradient(
+    circle at 50% 50%,
+    rgba(0, 219, 233, 0.05) 0%,
+    rgba(0, 0, 0, 0) 70%
+  );
+}
+.light .hero-gradient {
+  background: radial-gradient(
+    circle at 50% 50%,
+    rgba(0, 219, 233, 0.08) 0%,
+    rgba(255, 255, 255, 0) 70%
+  );
+}
+.light-streak {
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(0, 219, 233, 0.2),
+    transparent
+  );
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+   Hero Section — fills exactly one viewport height
+───────────────────────────────────────────────────────────────────────── */
+.hero-section {
+  min-height: 100svh;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  overflow: hidden;
+  padding: 0;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+   Video Grid Layouts
+───────────────────────────────────────────────────────────────────────── */
+/* YouTube — 16:9 horizontal grid */
+.youtube-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 20px;
+}
+@media (min-width: 640px) {
+  .youtube-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 20px;
+  }
+}
+@media (min-width: 1024px) {
+  .youtube-grid {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 24px;
+  }
+}
+
+/* Instagram — 9:16 portrait grid */
+.instagram-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 16px;
+}
+@media (min-width: 480px) {
+  .instagram-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 16px;
+  }
+}
+@media (min-width: 768px) {
+  .instagram-grid {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 20px;
+  }
+}
+@media (min-width: 1280px) {
+  .instagram-grid {
+    grid-template-columns: repeat(4, 1fr);
+    gap: 20px;
+  }
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+   Aspect-ratio thumbnail containers
+───────────────────────────────────────────────────────────────────────── */
+.thumb-youtube {
+  aspect-ratio: 16 / 9;
+  position: relative;
+  overflow: hidden;
+  background: #1c1b1b;
+  contain: layout;
+}
+.thumb-instagram {
+  aspect-ratio: 9 / 16;
+  position: relative;
+  overflow: hidden;
+  background: #1c1b1b;
+  contain: layout;
+}
+.thumb-youtube img,
+.thumb-instagram img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  transition: transform 0.7s ease;
+}
+.video-card:hover .thumb-youtube img,
+.video-card:hover .thumb-instagram img {
+  transform: scale(1.06);
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+   Video Card hover glow
+───────────────────────────────────────────────────────────────────────── */
+.video-card {
+  transition: transform 0.25s ease, box-shadow 0.25s ease;
+  border-radius: 16px;
+  overflow: hidden;
+}
+.video-card:hover {
+  transform: translateY(-4px) scale(1.015);
+  box-shadow:
+    0 0 0 1px rgba(0, 219, 233, 0.25),
+    0 16px 48px rgba(0, 0, 0, 0.45),
+    0 0 30px rgba(0, 219, 233, 0.12);
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+   Platform Tab Buttons
+───────────────────────────────────────────────────────────────────────── */
+.platform-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 28px;
+  border-radius: 50px;
+  font-family: "JetBrains Mono", monospace;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: all 0.25s ease;
+  border: 2px solid transparent;
+  min-width: 160px;
+  justify-content: center;
+}
+.platform-tab.active {
+  background: #00dbe9;
+  color: #002022;
+  border-color: #00dbe9;
+  box-shadow:
+    0 0 0 1px rgba(0, 219, 233, 0.4),
+    0 0 24px rgba(0, 219, 233, 0.35),
+    0 4px 16px rgba(0, 0, 0, 0.3);
+}
+.platform-tab:not(.active) {
+  background: rgba(255, 255, 255, 0.04);
+  color: #b9cacb;
+  border-color: rgba(255, 255, 255, 0.12);
+}
+.platform-tab:not(.active):hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: #e5e2e1;
+  border-color: rgba(0, 219, 233, 0.3);
+  box-shadow: 0 0 16px rgba(0, 219, 233, 0.1);
+}
+.light .platform-tab:not(.active) {
+  background: rgba(0, 0, 0, 0.04);
+  color: #454747;
+  border-color: rgba(0, 0, 0, 0.12);
+}
+.light .platform-tab:not(.active):hover {
+  background: rgba(0, 0, 0, 0.08);
+  color: #1a1c1c;
+}
+@media (max-width: 639px) {
+  .platform-tab {
+    padding: 12px 20px;
+    font-size: 12px;
+    min-width: 130px;
+    gap: 8px;
+  }
+  .platform-tab .tab-icon {
+    font-size: 18px !important;
+  }
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+   Play Overlay
+───────────────────────────────────────────────────────────────────────── */
+.play-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity 0.3s ease, background 0.3s ease;
+}
+.video-card:hover .play-overlay {
+  opacity: 1;
+  background: rgba(0, 0, 0, 0.2);
+}
+.play-btn-circle {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: rgba(0, 219, 233, 0.9);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transform: scale(0.8);
+  transition: transform 0.25s ease;
+}
+.video-card:hover .play-btn-circle {
+  transform: scale(1);
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+   Mobile Menu slide animation
+───────────────────────────────────────────────────────────────────────── */
+#mobile-menu {
+  transform: translateX(100%);
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+#mobile-menu.active {
+  transform: translateX(0);
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+   Top search dropdown
+───────────────────────────────────────────────────────────────────────── */
+#top-search-dropdown {
+  display: none;
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  width: 320px;
+  background: rgba(20, 20, 20, 0.97);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 16px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+  z-index: 100;
+  overflow: hidden;
+}
+.light #top-search-dropdown {
+  background: rgba(255, 255, 255, 0.97);
+  border-color: rgba(0, 0, 0, 0.08);
+}
+#top-search-dropdown.visible {
+  display: block;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+   Hero portfolio dropdown
+───────────────────────────────────────────────────────────────────────── */
+#portfolio-dropdown {
+  display: none;
+  position: absolute;
+  top: calc(100% + 12px);
+  left: 50%;
+  transform: translateX(-50%);
+  width: 220px;
+  background: rgba(20, 20, 20, 0.97);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 16px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+  z-index: 100;
+  overflow: hidden;
+}
+.light #portfolio-dropdown {
+  background: rgba(255, 255, 255, 0.97);
+  border-color: rgba(0, 0, 0, 0.08);
+}
+#portfolio-dropdown.visible {
+  display: block;
+}
