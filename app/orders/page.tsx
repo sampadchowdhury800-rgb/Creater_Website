@@ -1,6 +1,5 @@
 import { prisma } from "@/lib/prisma";
 import { getCurrentUserId } from "@/lib/auth-server";
-import { redirect } from "next/navigation";
 import OrdersClient from "./OrdersClient";
 
 export const metadata = {
@@ -9,7 +8,7 @@ export const metadata = {
 
 export default async function OrdersPage() {
   const userId = await getCurrentUserId();
-  
+
   if (!userId) {
     return <OrdersClient orders={[]} isAuthenticated={false} />;
   }
@@ -19,9 +18,15 @@ export default async function OrdersPage() {
     orderBy: { createdAt: "desc" },
     include: {
       items: {
-        include: { automation: true }
-      }
-    }
+        include: {
+          automation: {
+            include: {
+              files: true,
+            },
+          },
+        },
+      },
+    },
   });
 
   return <OrdersClient orders={orders} isAuthenticated={true} />;

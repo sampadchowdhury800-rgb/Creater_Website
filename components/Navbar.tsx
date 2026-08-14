@@ -6,7 +6,6 @@ import Image from "next/image";
 import { useTheme } from "./ThemeProvider";
 import { socialGroups } from "@/lib/socials";
 import type { PostCard } from "@/lib/postTypes";
-import { getPostHref } from "@/lib/postTypes";
 import { SignInButton, SignUpButton, UserButton, Show } from "@clerk/nextjs";
 
 interface NavbarProps {
@@ -40,33 +39,39 @@ export default function Navbar({ videos, onMenuOpen }: NavbarProps) {
       )
     : [];
 
-  function scrollToSection(id: string) {
-    const el = document.getElementById(id);
-    if (el) el.scrollIntoView({ behavior: "smooth" });
-  }
+  const handleVideosClick = (e: React.MouseEvent) => {
+    if (typeof window !== "undefined" && window.location.pathname === "/") {
+      e.preventDefault();
+      const el = document.getElementById("videos");
+      if (el) {
+        el.scrollIntoView({ behavior: "smooth" });
+      }
+    }
+  };
 
   return (
     <header className="fixed top-4 left-1/2 -translate-x-1/2 w-[95%] md:w-[90%] rounded-full border border-black/5 dark:border-white/10 bg-white/60 dark:bg-surface/40 backdrop-blur-xl shadow-[0_0_30px_rgba(0,219,233,0.1)] flex justify-between items-center px-6 md:px-8 py-3 max-w-[1440px] mx-auto z-[60] transition-colors">
       {/* Logo */}
-      <div
+      <Link
+        href="/"
         className="font-display-lg-mobile text-[24px] md:text-display-lg-mobile font-bold text-primary-fixed-dim dark:text-primary-fixed tracking-tighter hover:scale-105 active:scale-95 transition-transform cursor-pointer"
-        onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
       >
         Chowdhury Duo
-      </div>
+      </Link>
 
       {/* Desktop nav */}
       <nav className="hidden md:flex items-center gap-6 font-label-caps text-label-caps">
-        <button
+        <Link
+          href="/#videos"
+          onClick={handleVideosClick}
           className="text-on-tertiary-fixed-variant dark:text-on-surface-variant font-medium hover:text-primary-fixed-dim dark:hover:text-primary-fixed transition-all duration-300 ease-out"
-          onClick={() => scrollToSection("videos")}
         >
           Videos
-        </button>
+        </Link>
 
         {/* Portfolio dropdown */}
         <div className="relative group">
-          <button className="text-on-tertiary-fixed-variant dark:text-on-surface-variant font-medium hover:text-primary-fixed-dim dark:hover:text-primary-fixed transition-all duration-300 ease-out flex items-center gap-1">
+          <button className="text-on-tertiary-fixed-variant dark:text-on-surface-variant font-medium hover:text-primary-fixed-dim dark:hover:text-primary-fixed transition-all duration-300 ease-out flex items-center gap-1 cursor-pointer">
             Portfolio{" "}
             <span className="material-symbols-outlined text-[14px]">
               expand_more
@@ -90,28 +95,30 @@ export default function Navbar({ videos, onMenuOpen }: NavbarProps) {
           </div>
         </div>
 
-        <button
+        <Link
+          href="/achievements"
           className="text-on-tertiary-fixed-variant dark:text-on-surface-variant font-medium hover:text-primary-fixed-dim dark:hover:text-primary-fixed transition-all duration-300 ease-out"
-          onClick={() => scrollToSection("achievements")}
         >
           Achievements
-        </button>
+        </Link>
+
         <Link
           href="/automations"
           className="text-on-tertiary-fixed-variant dark:text-on-surface-variant font-medium hover:text-primary-fixed-dim dark:hover:text-primary-fixed transition-all duration-300 ease-out"
         >
           Automations
         </Link>
-        <button
+
+        <Link
+          href="/news"
           className="text-on-tertiary-fixed-variant dark:text-on-surface-variant font-medium hover:text-primary-fixed-dim dark:hover:text-primary-fixed transition-all duration-300 ease-out"
-          onClick={() => scrollToSection("news")}
         >
           News
-        </button>
+        </Link>
 
         {/* Socials dropdown */}
         <div className="relative group">
-          <button className="text-on-tertiary-fixed-variant dark:text-on-surface-variant font-medium hover:text-primary-fixed-dim dark:hover:text-primary-fixed transition-all duration-300 ease-out flex items-center gap-1">
+          <button className="text-on-tertiary-fixed-variant dark:text-on-surface-variant font-medium hover:text-primary-fixed-dim dark:hover:text-primary-fixed transition-all duration-300 ease-out flex items-center gap-1 cursor-pointer">
             Socials{" "}
             <span className="material-symbols-outlined text-[14px]">
               expand_more
@@ -160,7 +167,7 @@ export default function Navbar({ videos, onMenuOpen }: NavbarProps) {
             </span>
             <input
               className="bg-transparent border-none focus:ring-0 text-body-md text-on-tertiary-fixed dark:text-on-surface p-0 w-32 focus:w-48 transition-all duration-300 placeholder:text-on-tertiary-fixed-variant/50 dark:placeholder:text-on-surface-variant/50 outline-none"
-              placeholder="Search videos..."
+              placeholder="Search content..."
               type="text"
               autoComplete="off"
               value={topQuery}
@@ -193,20 +200,22 @@ export default function Navbar({ videos, onMenuOpen }: NavbarProps) {
             className={dropdownOpen && topQuery ? "visible" : ""}
           >
             <div className="px-4 py-3 border-b border-white/5 text-[11px] font-label-caps text-on-surface-variant tracking-widest uppercase">
-              Videos
+              Videos & Posts
             </div>
             <div className="max-h-72 overflow-y-auto">
               {filteredVideos.length === 0 ? (
                 <div className="px-4 py-6 text-center text-sm text-on-surface-variant">
-                  No videos found
+                  No content found
                 </div>
               ) : (
                 filteredVideos.map((v) => (
-                  <a
+                  <Link
                     key={v.id}
-                    href={getPostHref(v)}
-                    target="_blank"
-                    rel="noopener noreferrer"
+                    href={`/posts/${v.slug}`}
+                    onClick={() => {
+                      setTopQuery("");
+                      setDropdownOpen(false);
+                    }}
                     className="flex items-center gap-3 px-4 py-3 hover:bg-white/5 transition-colors border-b border-white/5 last:border-0"
                   >
                     {v.featuredImage ? (
@@ -228,7 +237,7 @@ export default function Navbar({ videos, onMenuOpen }: NavbarProps) {
                     <span className="text-sm text-on-surface line-clamp-2">
                       {v.title}
                     </span>
-                  </a>
+                  </Link>
                 ))
               )}
             </div>
@@ -237,7 +246,7 @@ export default function Navbar({ videos, onMenuOpen }: NavbarProps) {
 
         {/* Theme toggle */}
         <button
-          className="p-2 rounded-full hover:bg-black/10 dark:hover:bg-white/10 transition-colors"
+          className="p-2 rounded-full hover:bg-black/10 dark:hover:bg-white/10 transition-colors cursor-pointer"
           onClick={toggleTheme}
           title="Toggle Theme"
         >
@@ -256,12 +265,12 @@ export default function Navbar({ videos, onMenuOpen }: NavbarProps) {
         <div className="hidden md:flex items-center gap-2">
           <Show when="signed-out">
             <SignInButton>
-              <button className="px-4 py-1.5 text-sm font-medium text-on-tertiary-fixed-variant dark:text-on-surface-variant hover:text-primary-fixed-dim dark:hover:text-primary-fixed border border-black/10 dark:border-white/10 rounded-full hover:border-primary-fixed-dim/40 transition-all duration-300">
+              <button className="px-4 py-1.5 text-sm font-medium text-on-tertiary-fixed-variant dark:text-on-surface-variant hover:text-primary-fixed-dim dark:hover:text-primary-fixed border border-black/10 dark:border-white/10 rounded-full hover:border-primary-fixed-dim/40 transition-all duration-300 cursor-pointer">
                 Sign In
               </button>
             </SignInButton>
             <SignUpButton>
-              <button className="px-4 py-1.5 text-sm font-medium bg-primary-container text-on-primary-container rounded-full hover:bg-primary-fixed transition-all duration-300 active:scale-95">
+              <button className="px-4 py-1.5 text-sm font-medium bg-primary-container text-on-primary-container rounded-full hover:bg-primary-fixed transition-all duration-300 active:scale-95 cursor-pointer">
                 Sign Up
               </button>
             </SignUpButton>
@@ -278,7 +287,7 @@ export default function Navbar({ videos, onMenuOpen }: NavbarProps) {
         </div>
 
         {/* Mobile menu button */}
-        <button className="md:hidden p-2" onClick={onMenuOpen}>
+        <button className="md:hidden p-2 cursor-pointer" onClick={onMenuOpen}>
           <span className="material-symbols-outlined text-on-tertiary-fixed dark:text-on-surface">
             menu
           </span>

@@ -3,6 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { ShoppingCart, Star } from "lucide-react";
+import ShareButton from "@/components/ShareButton";
 
 interface AutomationCardProps {
   automation: {
@@ -19,12 +20,25 @@ interface AutomationCardProps {
 }
 
 export default function AutomationCard({ automation }: AutomationCardProps) {
-  const averageRating = automation.reviewCount > 0 
-    ? (automation.ratingSum / automation.reviewCount).toFixed(1)
-    : 0;
+  const averageRating =
+    automation.reviewCount > 0
+      ? (automation.ratingSum / automation.reviewCount).toFixed(1)
+      : 0;
+
+  const canonicalUrl = `/automations/${automation.slug}`;
 
   return (
     <div className="group relative flex flex-col bg-white/5 border border-white/10 rounded-2xl overflow-hidden hover:bg-white/10 hover:border-primary-fixed-dim/50 transition-all duration-300">
+      {/* Top Left Share Button */}
+      <div className="absolute top-3 left-3 z-20">
+        <ShareButton
+          title={automation.title}
+          url={canonicalUrl}
+          iconOnly
+          className="p-2 bg-black/60 hover:bg-black/80 backdrop-blur-md border border-white/10 text-white rounded-full transition-transform active:scale-90"
+        />
+      </div>
+
       {/* Thumbnail */}
       <Link href={`/automations/${automation.slug}`} className="relative aspect-video w-full overflow-hidden bg-black/20 block">
         {automation.thumbnailUrl ? (
@@ -39,7 +53,7 @@ export default function AutomationCard({ automation }: AutomationCardProps) {
             No Image
           </div>
         )}
-        
+
         {/* Discount Badge */}
         {automation.originalPrice && automation.originalPrice > automation.price && (
           <div className="absolute top-3 right-3 bg-red-500 text-white text-xs font-bold px-2 py-1 rounded">
@@ -87,12 +101,13 @@ export default function AutomationCard({ automation }: AutomationCardProps) {
           </div>
 
           <div className="flex items-center gap-2">
-            <Link 
+            <Link
               href={`/automations/${automation.slug}`}
-              className="p-2 rounded-full bg-white/5 hover:bg-white/10 text-white transition-colors"
-              title="View Details"
+              className="px-3 py-1.5 rounded-xl bg-primary text-black font-bold text-xs hover:bg-primary-fixed transition-colors flex items-center gap-1.5"
+              title="View Product Details"
             >
-              <ShoppingCart className="w-5 h-5" />
+              <ShoppingCart className="w-3.5 h-3.5" />
+              <span>Get Now</span>
             </Link>
           </div>
         </div>

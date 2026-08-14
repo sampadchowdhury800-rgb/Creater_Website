@@ -198,6 +198,7 @@ model Automation {
   updatedAt       DateTime            @updatedAt
 
   media           AutomationMedia[]
+  files           AutomationFile[]
   reviews         AutomationReview[]
   comments        AutomationComment[]
   cartItems       CartItem[]
@@ -219,6 +220,26 @@ model AutomationMedia {
   isPrimary    Boolean   @default(false)
 
   createdAt    DateTime  @default(now())
+}
+
+/// Downloadable resources / product files attached to an automation product.
+model AutomationFile {
+  id           String     @id @default(cuid())
+  automationId String
+  automation   Automation @relation(fields: [automationId], references: [id], onDelete: Cascade)
+
+  title        String     // Display title, e.g. "Lead Generation Workflow JSON"
+  fileName     String     // Original file name with extension, e.g. "lead-gen-v1.zip"
+  fileUrl      String     // Storage delivery URL
+  publicId     String     // Cloudinary publicId / storage identifier
+  fileSize     Int?       // in bytes
+  fileType     String?    // MIME type or file extension
+  sortOrder    Int        @default(0)
+
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  @@index([automationId])
 }
 
 /// Taxonomy categories for filtering automations.

@@ -2,9 +2,10 @@
 
 import { useState, useCallback } from "react";
 import Image from "next/image";
+import Link from "next/link";
 import type { PostCard, ToolLink } from "@/lib/postTypes";
-import { getPostHref } from "@/lib/postTypes";
 import PromptModal from "./PromptModal";
+import ShareButton from "@/components/ShareButton";
 
 interface VideoCardProps {
   video: PostCard;
@@ -37,7 +38,7 @@ function getIcon(label: string): string {
   return ICON_MAP.default;
 }
 
-// ── Compact prompt card (shown on video card before modal) ────────────────────
+// ── Compact prompt card ───────────────────────────────────────────────────────
 function PromptCard({
   link,
   index,
@@ -94,7 +95,7 @@ function PromptCard({
   );
 }
 
-// ── Prompts panel (shown expanded on the video card) ──────────────────────────
+// ── Prompts panel ─────────────────────────────────────────────────────────────
 function PromptsPanel({ title, links, videoTitle }: { title: string; links: ToolLink[]; videoTitle: string }) {
   const [open, setOpen] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
@@ -110,13 +111,11 @@ function PromptsPanel({ title, links, videoTitle }: { title: string; links: Tool
     setSelectedIndex(null);
   }, []);
 
-  // Open modal with all links when clicking "View All"
   const openAllModal = useCallback(() => {
     setSelectedIndex(null);
     setModalOpen(true);
   }, []);
 
-  // Which links to show in modal: single or all
   const modalLinks = selectedIndex !== null ? [links[selectedIndex]] : links;
   const modalTitle = selectedIndex !== null
     ? `${videoTitle} — ${links[selectedIndex].label}`
@@ -171,7 +170,6 @@ function PromptsPanel({ title, links, videoTitle }: { title: string; links: Tool
             />
           ))}
 
-          {/* View all button (only shown when >1 prompt) */}
           {links.length > 1 && (
             <button
               onClick={openAllModal}
@@ -188,7 +186,7 @@ function PromptsPanel({ title, links, videoTitle }: { title: string; links: Tool
         </div>
       )}
 
-      {/* Modal — lazy rendered */}
+      {/* Modal */}
       <PromptModal
         isOpen={modalOpen}
         onClose={closeModal}
@@ -205,8 +203,9 @@ function PromptsPanel({ title, links, videoTitle }: { title: string; links: Tool
 export default function VideoCardComponent({ video }: VideoCardProps) {
   const isYoutube = video.platform === "YOUTUBE";
   const thumbClass = isYoutube ? "thumb-youtube" : "thumb-instagram";
-  const href = getPostHref(video);
-  
+  const internalHref = `/posts/${video.slug}`;
+  const shareUrl = `/posts/${video.slug}`;
+
   const CardContent = (
     <>
       {/* Thumbnail */}
@@ -253,7 +252,7 @@ export default function VideoCardComponent({ video }: VideoCardProps) {
           {video.title}
         </h3>
         {video.shortDesc && (
-          <p className="font-body-md text-on-tertiary-fixed-variant dark:text-on-surface-variant text-sm opacity-80">
+          <p className="font-body-md text-on-tertiary-fixed-variant dark:text-on-surface-variant text-sm opacity-80 line-clamp-2">
             {video.shortDesc}
           </p>
         )}
@@ -262,18 +261,23 @@ export default function VideoCardComponent({ video }: VideoCardProps) {
   );
 
   return (
-    <div className="video-card group relative bg-white/60 dark:bg-surface-container-low/40 backdrop-blur-2xl border border-black/5 dark:border-white/5 glass-border flex flex-col h-full">
-      {href ? (
-        <a href={href} target="_blank" rel="noopener noreferrer" className="block">
-          {CardContent}
-        </a>
-      ) : (
-        <div className="block cursor-default">
-          {CardContent}
-        </div>
-      )}
+    <div className="video-card group relative bg-white/60 dark:bg-surface-container-low/40 backdrop-blur-2xl border border-black/5 dark:border-white/5 glass-border flex flex-col h-full rounded-2xl overflow-hidden">
+      {/* Share Button top-left absolute */}
+      <div className="absolute top-3 left-3 z-20">
+        <ShareButton
+          title={video.title}
+          url={shareUrl}
+          iconOnly
+          className="p-2 bg-black/60 hover:bg-black/80 backdrop-blur-md border border-white/10 text-white rounded-full transition-transform active:scale-90"
+        />
+      </div>
 
-      {/* Prompts panel — rendered at the bottom outside <a> */}
+      {/* Internal Navigation to Content Detail Page */}
+      <Link href={internalHref} className="block flex-grow">
+        {CardContent}
+      </Link>
+
+      {/* Prompts panel */}
       <div className="mt-auto">
         {video.promptSections && video.promptSections.length > 0 ? (
           video.promptSections.map((section) => (

@@ -13,19 +13,20 @@ interface PageProps {
 
 export default async function EditAutomationPage({ params }: PageProps) {
   await requireAdminSession();
-  
+
   const resolvedParams = await params;
 
   const [automation, categories] = await Promise.all([
     prisma.automation.findUnique({
       where: { id: resolvedParams.id },
       include: {
-        media: { orderBy: { sortOrder: "asc" } }
-      }
+        media: { orderBy: { sortOrder: "asc" } },
+        files: { orderBy: { sortOrder: "asc" } },
+      },
     }),
     prisma.automationCategory.findMany({
-      orderBy: { name: "asc" }
-    })
+      orderBy: { name: "asc" },
+    }),
   ]);
 
   if (!automation) notFound();

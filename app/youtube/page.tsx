@@ -3,12 +3,13 @@ import Link from "next/link";
 import Image from "next/image";
 import { Play } from "lucide-react";
 import Leaderboard728 from "@/components/ads/Leaderboard728";
+import ShareButton from "@/components/ShareButton";
 
-// Opt out of ISR — rely solely on on-demand revalidation via revalidatePath()
-export const revalidate = false;
+export const revalidate = 0;
 
 type Post = {
   id: string;
+  slug: string;
   title: string;
   shortDesc: string | null;
   featuredImage: string | null;
@@ -21,6 +22,14 @@ export default async function YouTubePage() {
     posts = await prisma.post.findMany({
       where: { platform: "YOUTUBE", status: "PUBLISHED" },
       orderBy: { publishDate: "desc" },
+      select: {
+        id: true,
+        slug: true,
+        title: true,
+        shortDesc: true,
+        featuredImage: true,
+        youtubeUrl: true,
+      },
     });
   } catch (_error) {
     console.error("DB not connected:", _error);
@@ -34,10 +43,10 @@ export default async function YouTubePage() {
           ← Back
         </Link>
         <h1 className="flex items-center gap-2 text-xl font-bold">
-          <Play className="text-red-500" size={24} />
-          YouTube Posts
+          <Play className="text-red-500 fill-current" size={24} />
+          YouTube Posts & Videos
         </h1>
-        <div className="w-16" />
+        <ShareButton title="Chowdhury Duo YouTube Videos" url="/youtube" iconOnly />
       </header>
 
       {/* Content */}
@@ -50,44 +59,69 @@ export default async function YouTubePage() {
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {posts.map((post) => (
-              <article
-                key={post.id}
-                className="bg-[#111827] border border-white/8 rounded-2xl overflow-hidden hover:border-red-500/30 transition-colors group"
-              >
-                {post.featuredImage && (
-                  <Image
-                    src={post.featuredImage}
-                    alt={post.title}
-                    width={800}
-                    height={450}
-                    className="w-full aspect-video object-cover group-hover:scale-105 transition-transform duration-300"
-                    unoptimized
-                  />
-                )}
-                <div className="p-5">
-                  <h2 className="text-base font-semibold text-white mb-1 line-clamp-2">
-                    {post.title}
-                  </h2>
-                  {post.shortDesc && (
-                    <p className="text-sm text-[#6B7280] line-clamp-2 mb-3">
-                      {post.shortDesc}
-                    </p>
-                  )}
-                  {post.youtubeUrl && (
-                    <a
-                      href={post.youtubeUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1.5 text-sm text-red-400 hover:text-red-300 font-medium transition-colors"
+            {posts.map((post) => {
+              const canonicalUrl = `/posts/${post.slug}`;
+
+              return (
+                <article
+                  key={post.id}
+                  className="bg-[#111827] border border-white/8 rounded-2xl overflow-hidden hover:border-red-500/30 transition-colors group flex flex-col justify-between relative"
+                >
+                  <div className="absolute top-3 right-3 z-20">
+                    <ShareButton
+                      title={post.title}
+                      url={canonicalUrl}
+                      iconOnly
+                      className="p-2 bg-black/60 hover:bg-black/80 backdrop-blur-md border border-white/10 text-white rounded-full transition-transform active:scale-90"
+                    />
+                  </div>
+
+                  <Link href={canonicalUrl} className="block">
+                    {post.featuredImage && (
+                      <div className="relative aspect-video w-full overflow-hidden bg-black/40">
+                        <Image
+                          src={post.featuredImage}
+                          alt={post.title}
+                          fill
+                          className="object-cover group-hover:scale-105 transition-transform duration-300"
+                          unoptimized
+                        />
+                      </div>
+                    )}
+                    <div className="p-5">
+                      <h2 className="text-base font-semibold text-white mb-1 line-clamp-2 group-hover:text-cyan-400 transition-colors">
+                        {post.title}
+                      </h2>
+                      {post.shortDesc && (
+                        <p className="text-sm text-[#6B7280] line-clamp-2 mb-3">
+                          {post.shortDesc}
+                        </p>
+                      )}
+                    </div>
+                  </Link>
+
+                  <div className="p-5 pt-0 flex items-center justify-between border-t border-white/5 mt-auto">
+                    <Link
+                      href={canonicalUrl}
+                      className="text-xs text-primary font-bold hover:underline"
                     >
-                      <Play size={14} />
-                      Watch on YouTube
-                    </a>
-                  )}
-                </div>
-              </article>
-            ))}
+                      View Details
+                    </Link>
+                    {post.youtubeUrl && (
+                      <a
+                        href={post.youtubeUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1.5 text-xs text-red-400 hover:text-red-300 font-medium transition-colors"
+                      >
+                        <Play size={12} className="fill-current" />
+                        Watch on YouTube
+                      </a>
+                    )}
+                  </div>
+                </article>
+              );
+            })}
           </div>
         )}
       </main>

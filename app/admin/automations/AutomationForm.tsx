@@ -1,10 +1,9 @@
 "use client";
 
-import { useState, useCallback, use } from "react";
-import { useRouter } from "next/navigation";
+import { useState } from "react";
 import { toast } from "react-toastify";
 import { createAutomation, updateAutomation } from "./actions";
-import { ArrowLeft, Save, Loader2, Image as ImageIcon, Plus, Trash2, Video } from "lucide-react";
+import { ArrowLeft, Save, Loader2, Image as ImageIcon, Video, Trash2, FileText, UploadCloud, Download } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
 
@@ -15,16 +14,27 @@ interface MediaItem {
   isPrimary: boolean;
 }
 
+interface DownloadableFileItem {
+  id?: string;
+  title: string;
+  fileName: string;
+  fileUrl: string;
+  publicId: string;
+  fileSize?: number;
+  fileType?: string;
+}
+
 interface AutomationFormProps {
   initialData?: any;
   categories: any[];
 }
 
 export default function AutomationForm({ initialData, categories }: AutomationFormProps) {
-  const router = useRouter();
   const isNew = !initialData;
   const [saving, setSaving] = useState(false);
-  const [uploading, setUploading] = useState(false);
+  const [uploadingMedia, setUploadingMedia] = useState(false);
+  const [uploadingFiles, setUploadingFiles] = useState(false);
+  const [newFileTitle, setNewFileTitle] = useState("");
 
   const [formData, setFormData] = useState({
     title: initialData?.title || "",
@@ -44,7 +54,19 @@ export default function AutomationForm({ initialData, categories }: AutomationFo
       url: m.url,
       publicId: m.publicId,
       type: m.type,
-      isPrimary: m.isPrimary
+      isPrimary: m.isPrimary,
+    })) || []
+  );
+
+  const [downloadableFiles, setDownloadableFiles] = useState<DownloadableFileItem[]>(
+    initialData?.files?.map((f: any) => ({
+      id: f.id,
+      title: f.title,
+      fileName: f.fileName,
+      fileUrl: f.fileUrl,
+      publicId: f.publicId,
+      fileSize: f.fileSize,
+      fileType: f.fileType,
     })) || []
   );
 
@@ -53,9 +75,8 @@ export default function AutomationForm({ initialData, categories }: AutomationFo
     setFormData((prev) => ({
       ...prev,
       [name]: value,
-      // Auto-generate slug from title if new and slug hasn't been manually edited
-      ...(name === "title" && isNew && prev.slug === prev.title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, '')
-        ? { slug: value.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, '') }
+      ...(name === "title" && isNew && prev.slug === prev.title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)+/g, "")
+        ? { slug: value.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)+/g, "") }
         : {}),
     }));
   };
@@ -63,24 +84,24 @@ export default function AutomationForm({ initialData, categories }: AutomationFo
   const handleMediaUpload = async (e: React.ChangeEvent<HTMLInputElement>, type: "IMAGE" | "VIDEO") => {
     const files = e.target.files;
     if (!files || files.length === 0) return;
-    
-    setUploading(true);
+
+    setUploadingMedia(true);
     toast.info(`Uploading ${type.toLowerCase()}...`);
-    
+
     try {
       const newItems: MediaItem[] = [];
       for (let i = 0; i < files.length; i++) {
         const file = files[i];
         const uploadData = new FormData();
         uploadData.append("file", file);
-        
+
         const res = await fetch("/api/admin/upload", {
           method: "POST",
           body: uploadData,
         });
-        
+
         if (!res.ok) throw new Error(`Upload failed for ${file.name}`);
-        
+
         const data = await res.json();
         newItems.push({
           url: data.url,
@@ -89,25 +110,23 @@ export default function AutomationForm({ initialData, categories }: AutomationFo
           isPrimary: mediaItems.length === 0 && i === 0 && type === "IMAGE",
         });
       }
-      
-      setMediaItems(prev => [...prev, ...newItems]);
-      toast.success("Upload complete!");
+
+      setMediaItems((prev) => [...prev, ...newItems]);
+      toast.success("Media upload complete!");
     } catch (error) {
       toast.error("Media upload failed");
     } finally {
-      setUploading(false);
-      // clear input
-      e.target.value = '';
+      setUploadingMedia(false);
+      e.target.value = "";
     }
   };
 
   const removeMedia = (index: number) => {
-    setMediaItems(prev => {
+    setMediaItems((prev) => {
       const newItems = [...prev];
       const removed = newItems.splice(index, 1)[0];
-      // If we removed the primary, make the first image primary if available
       if (removed.isPrimary) {
-        const firstImage = newItems.find(m => m.type === "IMAGE");
+        const firstImage = newItems.find((m) => m.type === "IMAGE");
         if (firstImage) firstImage.isPrimary = true;
       }
       return newItems;
@@ -119,26 +138,77 @@ export default function AutomationForm({ initialData, categories }: AutomationFo
       toast.error("Only images can be set as primary thumbnail");
       return;
     }
-    setMediaItems(prev => prev.map((item, i) => ({
-      ...item,
-      isPrimary: i === index
-    })));
+    setMediaItems((prev) =>
+      prev.map((item, i) => ({
+        ...item,
+        isPrimary: i === index,
+      }))
+    );
+  };
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+
+    setUploadingFiles(true);
+    toast.info("Uploading downloadable resource...");
+
+    try {
+      const uploaded: DownloadableFileItem[] = [];
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        const uploadData = new FormData();
+        uploadData.append("file", file);
+        uploadData.append("title", newFileTitle.trim() || file.name);
+
+        const res = await fetch("/api/admin/automations/files/upload", {
+          method: "POST",
+          body: uploadData,
+        });
+
+        if (!res.ok) throw new Error(`Upload failed for ${file.name}`);
+
+        const data = await res.json();
+        uploaded.push({
+          title: data.title,
+          fileName: data.fileName,
+          fileUrl: data.fileUrl,
+          publicId: data.publicId,
+          fileSize: data.fileSize,
+          fileType: data.fileType,
+        });
+      }
+
+      setDownloadableFiles((prev) => [...prev, ...uploaded]);
+      setNewFileTitle("");
+      toast.success("Downloadable file attached successfully!");
+    } catch (error) {
+      toast.error("File upload failed.");
+    } finally {
+      setUploadingFiles(false);
+      e.target.value = "";
+    }
+  };
+
+  const removeDownloadableFile = (index: number) => {
+    setDownloadableFiles((prev) => prev.filter((_, i) => i !== index));
+    toast.info("Resource detached.");
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSaving(true);
-    
+
     try {
       const payload = new FormData();
       Object.entries(formData).forEach(([key, value]) => {
         payload.append(key, value);
       });
       payload.append("mediaItems", JSON.stringify(mediaItems));
+      payload.append("downloadableFiles", JSON.stringify(downloadableFiles));
 
       if (isNew) {
         await createAutomation(payload);
-        // Server action handles redirect/toast natively? No, server actions might redirect, we should just let it.
       } else {
         await updateAutomation(initialData.id, payload);
       }
@@ -159,7 +229,7 @@ export default function AutomationForm({ initialData, categories }: AutomationFo
             <h1 className="text-2xl font-bold text-white mb-1">
               {isNew ? "New Automation" : "Edit Automation"}
             </h1>
-            <p className="text-on-surface-variant text-sm">Fill in the product details</p>
+            <p className="text-on-surface-variant text-sm">Fill in the product details and attach customer files</p>
           </div>
         </div>
         <div className="flex items-center gap-3">
@@ -171,8 +241,8 @@ export default function AutomationForm({ initialData, categories }: AutomationFo
           </Link>
           <button
             type="submit"
-            disabled={saving || uploading}
-            className="flex items-center gap-2 px-6 py-2 bg-primary-container hover:bg-primary-fixed text-on-primary-container font-bold rounded-xl transition-colors disabled:opacity-50"
+            disabled={saving || uploadingMedia || uploadingFiles}
+            className="flex items-center gap-2 px-6 py-2 bg-primary-container hover:bg-primary-fixed text-on-primary-container font-bold rounded-xl transition-colors disabled:opacity-50 cursor-pointer"
           >
             {saving ? <Loader2 size={18} className="animate-spin" /> : <Save size={18} />}
             {saving ? "Saving..." : "Save Product"}
@@ -181,10 +251,11 @@ export default function AutomationForm({ initialData, categories }: AutomationFo
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        {/* Left 2 Cols: Details & Media & Files */}
         <div className="lg:col-span-2 space-y-6">
           <div className="bg-[#1C1C1E] border border-white/10 rounded-2xl p-6 space-y-4">
             <h2 className="text-lg font-bold text-white mb-4">Basic Details</h2>
-            
+
             <div>
               <label className="block text-sm font-medium text-on-surface-variant mb-2">Title</label>
               <input
@@ -194,10 +265,10 @@ export default function AutomationForm({ initialData, categories }: AutomationFo
                 value={formData.title}
                 onChange={handleChange}
                 className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-primary-fixed-dim focus:ring-1 focus:ring-primary-fixed-dim"
-                placeholder="Product title"
+                placeholder="e.g. AI Lead Generation Workflow"
               />
             </div>
-            
+
             <div>
               <label className="block text-sm font-medium text-on-surface-variant mb-2">Slug</label>
               <input
@@ -233,9 +304,10 @@ export default function AutomationForm({ initialData, categories }: AutomationFo
             </div>
           </div>
 
+          {/* Features & Requirements */}
           <div className="bg-[#1C1C1E] border border-white/10 rounded-2xl p-6 space-y-4">
             <h2 className="text-lg font-bold text-white mb-4">Features & Requirements</h2>
-            
+
             <div>
               <label className="block text-sm font-medium text-on-surface-variant mb-2">Features (One per line)</label>
               <textarea
@@ -244,7 +316,7 @@ export default function AutomationForm({ initialData, categories }: AutomationFo
                 onChange={handleChange}
                 rows={5}
                 className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-primary-fixed-dim focus:ring-1 focus:ring-primary-fixed-dim resize-y"
-                placeholder="Feature 1&#10;Feature 2"
+                placeholder="Automated email scraping&#10;CRM Webhook sync"
               />
             </div>
 
@@ -256,14 +328,18 @@ export default function AutomationForm({ initialData, categories }: AutomationFo
                 onChange={handleChange}
                 rows={5}
                 className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-primary-fixed-dim focus:ring-1 focus:ring-primary-fixed-dim resize-y"
-                placeholder="macOS 12+&#10;Notion Account"
+                placeholder="Make.com or Zapier account&#10;OpenAI API Key"
               />
             </div>
           </div>
 
+          {/* Preview Media Gallery */}
           <div className="bg-[#1C1C1E] border border-white/10 rounded-2xl p-6">
             <div className="flex justify-between items-center mb-4">
-              <h2 className="text-lg font-bold text-white">Media Gallery</h2>
+              <div>
+                <h2 className="text-lg font-bold text-white">Product Preview Media</h2>
+                <p className="text-xs text-on-surface-variant">Public thumbnails and preview videos shown on marketplace</p>
+              </div>
               <div className="flex gap-2">
                 <label className="cursor-pointer flex items-center gap-2 px-3 py-1.5 bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg text-sm text-white transition-colors">
                   <ImageIcon size={16} /> Image
@@ -278,13 +354,13 @@ export default function AutomationForm({ initialData, categories }: AutomationFo
 
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
               {mediaItems.map((item, idx) => (
-                <div key={idx} className={`relative aspect-video rounded-lg overflow-hidden border-2 ${item.isPrimary ? 'border-primary-fixed-dim' : 'border-white/10'}`}>
+                <div key={idx} className={`relative aspect-video rounded-lg overflow-hidden border-2 ${item.isPrimary ? "border-primary-fixed-dim" : "border-white/10"}`}>
                   {item.type === "VIDEO" ? (
                     <video src={item.url} className="w-full h-full object-cover" />
                   ) : (
                     <Image src={item.url} alt="Gallery item" fill className="object-cover" />
                   )}
-                  
+
                   <div className="absolute inset-0 bg-black/50 opacity-0 hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-2">
                     <button type="button" onClick={() => removeMedia(idx)} className="p-2 bg-red-500 hover:bg-red-600 text-white rounded-full">
                       <Trash2 size={16} />
@@ -303,18 +379,91 @@ export default function AutomationForm({ initialData, categories }: AutomationFo
                 </div>
               ))}
               {mediaItems.length === 0 && (
-                <div className="col-span-full py-12 text-center text-on-surface-variant border-2 border-dashed border-white/10 rounded-lg">
-                  No media uploaded yet.
+                <div className="col-span-full py-8 text-center text-on-surface-variant border-2 border-dashed border-white/10 rounded-lg">
+                  No preview media uploaded yet.
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Purchased Downloadable Product Files */}
+          <div className="bg-[#1C1C1E] border border-cyan-500/20 bg-cyan-500/[0.02] rounded-2xl p-6">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4">
+              <div>
+                <h2 className="text-lg font-bold text-white flex items-center gap-2">
+                  <Download className="w-5 h-5 text-primary" />
+                  Purchased Downloadable Files
+                </h2>
+                <p className="text-xs text-on-surface-variant">
+                  Protected resources delivered only to customers after confirmed payment (ZIP, JSON, PDF, scripts)
+                </p>
+              </div>
+            </div>
+
+            {/* Custom label & Upload trigger */}
+            <div className="flex flex-col sm:flex-row gap-3 mb-4">
+              <input
+                type="text"
+                placeholder="Resource title (e.g. Lead Gen Workflow v1.0)"
+                value={newFileTitle}
+                onChange={(e) => setNewFileTitle(e.target.value)}
+                className="flex-1 bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-sm text-white focus:outline-none focus:border-primary"
+              />
+              <label className="cursor-pointer flex items-center justify-center gap-2 px-4 py-2 bg-primary text-black font-bold rounded-xl text-sm hover:bg-primary-fixed transition-colors">
+                <UploadCloud size={16} />
+                {uploadingFiles ? "Uploading..." : "Upload Resource"}
+                <input
+                  type="file"
+                  className="hidden"
+                  onChange={handleFileUpload}
+                  disabled={uploadingFiles}
+                />
+              </label>
+            </div>
+
+            {/* Attached files list */}
+            <div className="space-y-2">
+              {downloadableFiles.map((file, idx) => (
+                <div
+                  key={idx}
+                  className="flex items-center justify-between p-3.5 bg-white/5 border border-white/10 rounded-xl hover:border-white/20 transition-colors"
+                >
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="p-2 bg-primary/10 rounded-lg text-primary shrink-0">
+                      <FileText size={20} />
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-sm font-bold text-white truncate">{file.title}</p>
+                      <p className="text-xs text-on-surface-variant truncate">
+                        {file.fileName} {file.fileSize ? `• ${(file.fileSize / 1024).toFixed(1)} KB` : ""}
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => removeDownloadableFile(idx)}
+                    className="p-2 text-red-400 hover:text-red-300 hover:bg-red-400/10 rounded-lg transition-colors ml-3"
+                    title="Remove resource"
+                  >
+                    <Trash2 size={16} />
+                  </button>
+                </div>
+              ))}
+
+              {downloadableFiles.length === 0 && (
+                <div className="py-8 text-center text-on-surface-variant border-2 border-dashed border-white/10 rounded-xl text-sm">
+                  No downloadable product files attached yet.
                 </div>
               )}
             </div>
           </div>
         </div>
 
+        {/* Right Col: Pricing & Category */}
         <div className="space-y-6">
           <div className="bg-[#1C1C1E] border border-white/10 rounded-2xl p-6 space-y-4">
             <h2 className="text-lg font-bold text-white mb-4">Pricing</h2>
-            
+
             <div>
               <label className="block text-sm font-medium text-on-surface-variant mb-2">Price (INR)</label>
               <input
@@ -345,7 +494,7 @@ export default function AutomationForm({ initialData, categories }: AutomationFo
 
           <div className="bg-[#1C1C1E] border border-white/10 rounded-2xl p-6 space-y-4">
             <h2 className="text-lg font-bold text-white mb-4">Organization</h2>
-            
+
             <div>
               <label className="block text-sm font-medium text-on-surface-variant mb-2">Status</label>
               <select

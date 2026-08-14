@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import Navbar from "@/components/Navbar";
 import MobileMenu from "@/components/MobileMenu";
 import Footer from "@/components/Footer";
@@ -9,25 +10,116 @@ import MediaCarousel from "@/components/automations/MediaCarousel";
 import ShareButton from "@/components/automations/ShareButton";
 import ReviewsSection from "@/components/automations/ReviewsSection";
 import CommentsSection from "@/components/automations/CommentsSection";
-import { ShoppingCart, Heart, CheckCircle2 } from "lucide-react";
+import { ShoppingCart, Heart, CheckCircle2, Zap, Loader2 } from "lucide-react";
 import { toast } from "react-toastify";
 import { useAuth } from "@/lib/auth-client";
+import { loadRazorpayScript } from "@/lib/razorpay-client";
 
 interface ProductClientProps {
-  automation: any; // we can type this better later
+  automation: any;
 }
 
 export default function ProductClient({ automation }: ProductClientProps) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [isAddingToCart, setIsAddingToCart] = useState(false);
+  const [isBuyingNow, setIsBuyingNow] = useState(false);
   const { userId, openSignIn } = useAuth();
+  const router = useRouter();
+
+  const handleBuyNow = async () => {
+    if (!userId) {
+      openSignIn();
+      return;
+    }
+
+    setIsBuyingNow(true);
+    try {
+      const loaded = await loadRazorpayScript();
+      if (!loaded) {
+        toast.error("Failed to load Razorpay checkout gateway. Please check your internet connection.");
+        setIsBuyingNow(false);
+        return;
+      }
+
+      const res = await fetch("/api/orders/create", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ automationId: automation.id }),
+      });
+
+      const data = await res.json();
+      if (!res.ok || !data.razorpayOrderId) {
+        throw new Error(data.error || "Failed to initiate purchase.");
+      }
+
+      const options = {
+        key: data.key,
+        amount: data.amount,
+        currency: data.currency || "INR",
+        name: "Chowdhury Duo",
+        description: `Purchase ${automation.title}`,
+        order_id: data.razorpayOrderId,
+        handler: async function (response: {
+          razorpay_order_id: string;
+          razorpay_payment_id: string;
+          razorpay_signature: string;
+        }) {
+          try {
+            const verifyRes = await fetch("/api/orders/verify", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                orderId: data.orderId,
+                razorpayOrderId: response.razorpay_order_id,
+                razorpayPaymentId: response.razorpay_payment_id,
+                razorpaySignature: response.razorpay_signature,
+              }),
+            });
+
+            const verifyData = await verifyRes.json();
+            if (verifyRes.ok && verifyData.success) {
+              toast.success("Payment successful!");
+              router.push(`/orders/${data.orderId}`);
+            } else {
+              toast.error(verifyData.error || "Payment verification failed. Please contact support.");
+            }
+          } catch (err) {
+            console.error("Verification error:", err);
+            toast.error("Error verifying payment.");
+          } finally {
+            setIsBuyingNow(false);
+          }
+        },
+        modal: {
+          ondismiss: function () {
+            setIsBuyingNow(false);
+          },
+        },
+        theme: {
+          color: "#00DBEE",
+        },
+      };
+
+      const razorpay = new (window as any).Razorpay(options);
+      razorpay.on("payment.failed", function (failResponse: any) {
+        console.error("Payment failed:", failResponse);
+        toast.error(failResponse?.error?.description || "Payment failed.");
+        setIsBuyingNow(false);
+      });
+      razorpay.open();
+    } catch (err: any) {
+      console.error("Buy Now error:", err);
+      toast.error(err.message || "Failed to process Buy Now.");
+      setIsBuyingNow(false);
+    }
+  };
 
   const handleAddToCart = async () => {
     if (!userId) {
       openSignIn();
       return;
     }
-    
+
     setIsAddingToCart(true);
     try {
       const res = await fetch("/api/cart", {
@@ -35,7 +127,7 @@ export default function ProductClient({ automation }: ProductClientProps) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ automationId: automation.id }),
       });
-      
+
       if (!res.ok) throw new Error("Failed to add to cart");
       toast.success("Added to cart!");
     } catch (err) {
@@ -50,14 +142,14 @@ export default function ProductClient({ automation }: ProductClientProps) {
       openSignIn();
       return;
     }
-    
+
     try {
       const res = await fetch("/api/wishlist", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ automationId: automation.id }),
       });
-      
+
       if (!res.ok) throw new Error("Failed to add to wishlist");
       toast.success("Added to wishlist!");
     } catch (err) {
@@ -65,7 +157,9 @@ export default function ProductClient({ automation }: ProductClientProps) {
     }
   };
 
-  const shareUrl = typeof window !== "undefined" ? window.location.href : "";
+  const canonicalUrl = typeof window !== "undefined"
+    ? `${window.location.origin}/automations/${automation.slug}`
+    : `/automations/${automation.slug}`;
 
   return (
     <ThemeProvider>
@@ -90,7 +184,7 @@ export default function ProductClient({ automation }: ProductClientProps) {
               <h1 className="text-3xl md:text-4xl font-bold text-white mb-4 leading-tight">
                 {automation.title}
               </h1>
-              
+
               <div className="flex items-center gap-4 mb-6">
                 <div className="flex items-end gap-2">
                   <span className="text-3xl font-bold text-primary-fixed-dim">
@@ -117,25 +211,44 @@ export default function ProductClient({ automation }: ProductClientProps) {
                 </div>
               )}
 
-              {/* Action Buttons */}
+              {/* Action Buttons: Buy Now, Add to Cart, Wishlist, Share */}
               <div className="flex flex-col gap-3 mb-8">
-                <button 
+                <button
+                  onClick={handleBuyNow}
+                  disabled={isBuyingNow}
+                  className="w-full py-4 bg-primary text-black hover:bg-primary-fixed font-extrabold rounded-xl transition-all active:scale-95 flex items-center justify-center gap-2 shadow-[0_0_25px_rgba(0,219,238,0.3)] disabled:opacity-70 disabled:active:scale-100 cursor-pointer"
+                >
+                  {isBuyingNow ? (
+                    <>
+                      <Loader2 className="w-5 h-5 animate-spin" />
+                      <span>Initiating Checkout...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Zap className="w-5 h-5 fill-current" />
+                      <span>Buy Now</span>
+                    </>
+                  )}
+                </button>
+
+                <button
                   onClick={handleAddToCart}
                   disabled={isAddingToCart}
-                  className="w-full py-4 bg-primary-container hover:bg-primary-fixed text-on-primary-container font-bold rounded-xl transition-all active:scale-95 flex items-center justify-center gap-2 disabled:opacity-70 disabled:active:scale-100"
+                  className="w-full py-4 bg-white/10 hover:bg-white/15 text-white font-bold rounded-xl transition-all active:scale-95 flex items-center justify-center gap-2 border border-white/10 disabled:opacity-70 disabled:active:scale-100 cursor-pointer"
                 >
                   <ShoppingCart className="w-5 h-5" />
                   {isAddingToCart ? "Adding..." : "Add to Cart"}
                 </button>
+
                 <div className="flex gap-3">
-                  <button 
+                  <button
                     onClick={handleWishlist}
-                    className="flex-1 py-3 bg-white/5 hover:bg-white/10 border border-white/10 text-white font-medium rounded-xl transition-all active:scale-95 flex items-center justify-center gap-2"
+                    className="flex-1 py-3 bg-white/5 hover:bg-white/10 border border-white/10 text-white font-medium rounded-xl transition-all active:scale-95 flex items-center justify-center gap-2 cursor-pointer"
                   >
                     <Heart className="w-5 h-5" />
                     Wishlist
                   </button>
-                  <ShareButton title={automation.title} url={shareUrl} />
+                  <ShareButton title={automation.title} url={canonicalUrl} />
                 </div>
               </div>
 

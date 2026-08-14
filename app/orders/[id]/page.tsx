@@ -18,18 +18,26 @@ export default async function OrderDetailPage({ params }: PageProps) {
   }
 
   const resolvedParams = await params;
-  
+
   const order = await prisma.order.findUnique({
     where: { id: resolvedParams.id },
     include: {
       items: {
-        include: { automation: true }
-      }
-    }
+        include: {
+          automation: {
+            include: {
+              files: {
+                orderBy: { sortOrder: "asc" },
+              },
+            },
+          },
+        },
+      },
+    },
   });
 
   if (!order) notFound();
-  
+
   if (order.clerkUserId !== userId) {
     redirect("/orders");
   }
