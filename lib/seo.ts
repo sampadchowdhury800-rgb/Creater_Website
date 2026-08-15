@@ -18,6 +18,8 @@ export interface DynamicSeoOptions {
   type?: "website" | "article" | "profile";
   publishedTime?: string | null;
   modifiedTime?: string | null;
+  googleVerification?: string | null;
+  verification?: Metadata["verification"];
 }
 
 /**
@@ -100,6 +102,10 @@ export function buildDynamicMetadata(opts: DynamicSeoOptions): Metadata {
         opts.ogDescription?.trim() ||
         metaDescription,
       images: [ogImageUrl],
+    },
+    verification: {
+      google: opts.googleVerification?.trim() || "_e5YX0l1QxdSzswW_atxo5auWeXBNklEJPApFF8Iwsg",
+      ...opts.verification,
     },
   };
 }

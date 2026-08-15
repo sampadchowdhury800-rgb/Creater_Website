@@ -36,6 +36,7 @@ export const metadata: Metadata = buildDynamicMetadata({
   title: `${siteConfig.name} | ${siteConfig.tagline}`,
   description: siteConfig.shortDescription,
   canonicalPath: "/",
+  googleVerification: "_e5YX0l1QxdSzswW_atxo5auWeXBNklEJPApFF8Iwsg",
   keywords: [
     "Chowdhury Duo",
     "Sampad Chowdhury",
