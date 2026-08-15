@@ -8,6 +8,7 @@ import { createPost, updatePost } from "@/app/admin/actions";
 import { ArrowLeft, Save, Loader2, Image as ImageIcon, X } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
+import FaqEditor, { FaqItem } from "@/components/editor/FaqEditor";
 
 interface PostFormData {
   title: string;
@@ -19,12 +20,35 @@ interface PostFormData {
   platform: "INSTAGRAM" | "YOUTUBE";
   status: "DRAFT" | "PUBLISHED";
   publishDate: string;
-  
+
+  // Basic SEO
   seoTitle: string;
   seoDescription: string;
   canonicalUrl: string;
   keywords: string;
-  
+
+  // Open Graph
+  ogImage: string;
+  ogTitle: string;
+  ogDescription: string;
+
+  // Twitter
+  twitterImage: string;
+  twitterTitle: string;
+  twitterDescription: string;
+
+  // Crawling
+  noindex: boolean;
+  nofollow: boolean;
+  readingTime: string;
+
+  // AEO
+  directAnswer: string;
+  searchIntent: string;
+  primaryTopic: string;
+  faqs: FaqItem[];
+
+  // Taxonomy
   categoryIds: string[];
   tagIds: string[];
 }
@@ -56,6 +80,19 @@ export default function PostEditPage({ params }: { params: Promise<{ id: string 
     seoDescription: "",
     canonicalUrl: "",
     keywords: "",
+    ogImage: "",
+    ogTitle: "",
+    ogDescription: "",
+    twitterImage: "",
+    twitterTitle: "",
+    twitterDescription: "",
+    noindex: false,
+    nofollow: false,
+    readingTime: "",
+    directAnswer: "",
+    searchIntent: "",
+    primaryTopic: "",
+    faqs: [],
     categoryIds: [],
     tagIds: [],
   });
@@ -95,6 +132,19 @@ export default function PostEditPage({ params }: { params: Promise<{ id: string 
           seoDescription: post.seoDescription || "",
           canonicalUrl: post.canonicalUrl || "",
           keywords: post.keywords || "",
+          ogImage: post.ogImage || "",
+          ogTitle: post.ogTitle || "",
+          ogDescription: post.ogDescription || "",
+          twitterImage: post.twitterImage || "",
+          twitterTitle: post.twitterTitle || "",
+          twitterDescription: post.twitterDescription || "",
+          noindex: post.noindex || false,
+          nofollow: post.nofollow || false,
+          readingTime: post.readingTime?.toString() || "",
+          directAnswer: post.directAnswer || "",
+          searchIntent: post.searchIntent || "",
+          primaryTopic: post.primaryTopic || "",
+          faqs: Array.isArray(post.faqs) ? post.faqs : [],
           categoryIds: post.categories?.map((c: any) => c.id) || [],
           tagIds: post.tags?.map((t: any) => t.id) || [],
         });
@@ -118,6 +168,8 @@ export default function PostEditPage({ params }: { params: Promise<{ id: string 
       const payload = {
         ...formData,
         publishDate: new Date(formData.publishDate).toISOString(),
+        readingTime: formData.readingTime ? parseInt(formData.readingTime) : undefined,
+        faqs: formData.faqs.filter((f) => f.question && f.answer),
       };
 
       if (isNew) {
@@ -240,28 +292,76 @@ export default function PostEditPage({ params }: { params: Promise<{ id: string 
             </div>
           </div>
           
-          {/* SEO Section */}
+          {/* SEO & AEO Section */}
           <div className="bg-white dark:bg-gray-800 p-6 rounded-xl border border-gray-200 dark:border-gray-700 space-y-4">
-            <h3 className="text-lg font-bold text-gray-900 dark:text-white border-b border-gray-200 dark:border-gray-700 pb-2 mb-4">SEO Settings</h3>
+            <h3 className="text-lg font-bold text-gray-900 dark:text-white border-b border-gray-200 dark:border-gray-700 pb-2 mb-4">
+              SEO &amp; AEO (Answer Engine Optimization)
+            </h3>
+
+            {/* AEO Direct Answer */}
+            <div className="p-4 rounded-xl bg-cyan-950/20 border border-cyan-500/30 space-y-2">
+              <label className="block text-xs font-mono text-cyan-400 font-bold uppercase tracking-wider">
+                Direct Answer (AEO)
+              </label>
+              <p className="text-xs text-gray-400">
+                Direct concise answer to: &quot;What question does this post/tutorial answer?&quot; Displayed near the top for search engines &amp; AI answers.
+              </p>
+              <textarea
+                rows={3}
+                value={formData.directAnswer}
+                onChange={(e) => setFormData({ ...formData, directAnswer: e.target.value })}
+                className="w-full rounded-lg border border-cyan-500/30 bg-white dark:bg-gray-900 text-gray-900 dark:text-white text-xs px-3 py-2 outline-none focus:border-cyan-400"
+                placeholder="e.g. Setting up the Claude API requires an Anthropic developer account, generating an API key, and configuring environment variables..."
+              />
+            </div>
             
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Primary Topic / Entity</label>
+                <input
+                  type="text"
+                  value={formData.primaryTopic}
+                  onChange={(e) => setFormData({ ...formData, primaryTopic: e.target.value })}
+                  className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white px-3 py-2 text-sm"
+                  placeholder="e.g. Claude API, Algorithmic Trading, 3D Web"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Search Intent</label>
+                <select
+                  value={formData.searchIntent}
+                  onChange={(e) => setFormData({ ...formData, searchIntent: e.target.value })}
+                  className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white px-3 py-2 text-sm"
+                >
+                  <option value="">— Select —</option>
+                  <option value="Informational">Informational</option>
+                  <option value="How-to / Tutorial">How-to / Tutorial</option>
+                  <option value="Navigational">Navigational</option>
+                  <option value="Commercial">Commercial Investigation</option>
+                  <option value="Transactional">Transactional</option>
+                </select>
+              </div>
+            </div>
+
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">SEO Title</label>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">SEO Title (Optional Override)</label>
               <input
                 type="text"
                 value={formData.seoTitle}
                 onChange={(e) => setFormData({...formData, seoTitle: e.target.value})}
-                className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white px-3 py-2"
+                className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white px-3 py-2 text-sm"
                 placeholder="Leave blank to use main title"
               />
             </div>
             
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">SEO Description</label>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">SEO Description (Optional Override)</label>
               <textarea
                 value={formData.seoDescription}
                 onChange={(e) => setFormData({...formData, seoDescription: e.target.value})}
                 rows={2}
-                className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white px-3 py-2"
+                className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white px-3 py-2 text-sm"
                 placeholder="Meta description for search engines"
               />
             </div>
@@ -272,12 +372,55 @@ export default function PostEditPage({ params }: { params: Promise<{ id: string 
                 type="text"
                 value={formData.keywords}
                 onChange={(e) => setFormData({...formData, keywords: e.target.value})}
-                className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white px-3 py-2"
+                className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white px-3 py-2 text-sm"
                 placeholder="Comma separated keywords"
+              />
+            </div>
+
+            {/* Open Graph & Twitter */}
+            <div className="pt-4 border-t border-gray-200 dark:border-gray-700 space-y-3">
+              <h4 className="text-xs font-bold text-gray-500 uppercase tracking-wider">Open Graph / Social Preview</h4>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">OG Image URL</label>
+                <input type="url" value={formData.ogImage} onChange={(e) => setFormData({...formData, ogImage: e.target.value})} className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white px-3 py-2 text-sm" placeholder="Defaults to featured image" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">OG Title Override</label>
+                <input type="text" value={formData.ogTitle} onChange={(e) => setFormData({...formData, ogTitle: e.target.value})} className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white px-3 py-2 text-sm" placeholder="Defaults to SEO title" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">OG Description Override</label>
+                <textarea rows={2} value={formData.ogDescription} onChange={(e) => setFormData({...formData, ogDescription: e.target.value})} className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white px-3 py-2 text-sm" placeholder="Defaults to SEO description" />
+              </div>
+            </div>
+
+            {/* Advanced Crawling */}
+            <div className="pt-4 border-t border-gray-200 dark:border-gray-700 space-y-3">
+              <h4 className="text-xs font-bold text-gray-500 uppercase tracking-wider">Crawling &amp; Indexing</h4>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Reading Time (minutes)</label>
+                <input type="number" min="1" value={formData.readingTime} onChange={(e) => setFormData({...formData, readingTime: e.target.value})} className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white px-3 py-2 text-sm" placeholder="e.g. 5" />
+              </div>
+              <div className="flex items-center gap-3">
+                <input id="noindex" type="checkbox" checked={formData.noindex} onChange={(e) => setFormData({...formData, noindex: e.target.checked})} className="rounded border-gray-300 text-primary focus:ring-primary h-4 w-4" />
+                <label htmlFor="noindex" className="text-sm text-gray-700 dark:text-gray-300">No-index (hide from search engines)</label>
+              </div>
+              <div className="flex items-center gap-3">
+                <input id="nofollow" type="checkbox" checked={formData.nofollow} onChange={(e) => setFormData({...formData, nofollow: e.target.checked})} className="rounded border-gray-300 text-primary focus:ring-primary h-4 w-4" />
+                <label htmlFor="nofollow" className="text-sm text-gray-700 dark:text-gray-300">No-follow (don&apos;t pass link equity)</label>
+              </div>
+            </div>
+
+            {/* FAQs */}
+            <div className="pt-4 border-t border-gray-200 dark:border-gray-700">
+              <FaqEditor
+                faqs={formData.faqs}
+                onChange={(faqs) => setFormData({ ...formData, faqs })}
               />
             </div>
           </div>
         </div>
+
 
         {/* Sidebar */}
         <div className="space-y-6">

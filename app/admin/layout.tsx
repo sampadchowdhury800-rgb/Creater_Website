@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getAdminSession } from "@/lib/session";
-import { LayoutDashboard, FileText, Camera, Play, Image as ImageIcon, FolderTree, Tags, MessageSquare, BarChart, Settings, Bot } from "lucide-react";
+import { LayoutDashboard, FileText, Camera, Play, Image as ImageIcon, FolderTree, Tags, MessageSquare, BarChart, Settings, Bot, Share2 } from "lucide-react";
 import LogoutButton from "./LogoutButton";
 
 export default async function AdminLayout({
@@ -63,15 +63,43 @@ export default async function AdminLayout({
           </Link>
 
           <div className="pt-4 pb-2 px-3">
-            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">CMS</p>
+            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">CMS &amp; Portfolio</p>
           </div>
           
+          <Link
+            href="/admin/services"
+            className="flex items-center gap-3 px-3 py-2.5 text-sm text-[#D1D5DB] hover:text-white hover:bg-white/5 rounded-xl transition-colors"
+          >
+            <Bot size={18} className="text-cyan-400" />
+            Services
+          </Link>
+          <Link
+            href="/admin/projects"
+            className="flex items-center gap-3 px-3 py-2.5 text-sm text-[#D1D5DB] hover:text-white hover:bg-white/5 rounded-xl transition-colors"
+          >
+            <FolderTree size={18} className="text-blue-400" />
+            Projects (Portfolio)
+          </Link>
+          <Link
+            href="/admin/people"
+            className="flex items-center gap-3 px-3 py-2.5 text-sm text-[#D1D5DB] hover:text-white hover:bg-white/5 rounded-xl transition-colors"
+          >
+            <Tags size={18} className="text-pink-400" />
+            People / Founders
+          </Link>
+          <Link
+            href="/admin/social-profiles"
+            className="flex items-center gap-3 px-3 py-2.5 text-sm text-[#D1D5DB] hover:text-white hover:bg-white/5 rounded-xl transition-colors"
+          >
+            <Share2 size={18} className="text-cyan-400" />
+            Social Profiles
+          </Link>
           <Link
             href="/admin/automations"
             className="flex items-center gap-3 px-3 py-2.5 text-sm text-[#D1D5DB] hover:text-white hover:bg-white/5 rounded-xl transition-colors"
           >
             <Bot size={18} className="text-emerald-400" />
-            Automations
+            Automations Store
           </Link>
           <Link
             href="/admin/media"
@@ -101,6 +129,7 @@ export default async function AdminLayout({
             <MessageSquare size={18} className="text-green-400" />
             Comments
           </Link>
+
 
           <div className="pt-4 pb-2 px-3">
             <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">System</p>

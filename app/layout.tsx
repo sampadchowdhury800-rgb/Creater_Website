@@ -28,52 +28,49 @@ const jetbrainsMono = JetBrains_Mono({
   display: "swap",
 });
 
-export const metadata: Metadata = {
-  title: "Chowdhury Duo | Creator • Videos • Projects",
-  description:
-    "Chowdhury Duo — A cinematic creator duo pushing the boundaries of digital storytelling and lifestyle art. We craft immersive experiences through video and design.",
+import { buildDynamicMetadata } from "@/lib/seo";
+import { siteConfig } from "@/lib/siteConfig";
+import { getOrganizationSchema, getWebSiteSchema } from "@/lib/jsonld";
+
+export const metadata: Metadata = buildDynamicMetadata({
+  title: `${siteConfig.name} | ${siteConfig.tagline}`,
+  description: siteConfig.shortDescription,
+  canonicalPath: "/",
   keywords: [
     "Chowdhury Duo",
     "Sampad Chowdhury",
     "Bharti Shaw",
-    "YouTube",
-    "Instagram",
-    "creator",
-    "AI",
-    "lifestyle",
-    "content creator",
+    "Full Stack Developer",
+    "Business Automation",
+    "AI Workflows",
+    "SaaS Development",
+    "Next.js Developer",
+    "Python Developer",
+    "Digital Products",
   ],
-  authors: [{ name: "Chowdhury Duo" }],
-  metadataBase: new URL("https://chowdhuryduo.com"),
-  openGraph: {
-    type: "website",
-    locale: "en_US",
-    url: "https://chowdhuryduo.com",
-    siteName: "Chowdhury Duo",
-    title: "Chowdhury Duo | Creator • Videos • Projects",
-    description:
-      "A cinematic creator duo pushing the boundaries of digital storytelling and lifestyle art.",
-  },
-  twitter: {
-    card: "summary_large_image",
-    title: "Chowdhury Duo | Creator • Videos • Projects",
-    description:
-      "A cinematic creator duo pushing the boundaries of digital storytelling and lifestyle art.",
-  },
-  robots: {
-    index: true,
-    follow: true,
-  },
-};
+});
+
 
 export default function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const orgSchema = getOrganizationSchema();
+  const webSiteSchema = getWebSiteSchema();
+
   return (
     <html lang="en" className="dark">
       <head>
+        {/* Global JSON-LD structured data */}
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(orgSchema) }}
+        />
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(webSiteSchema) }}
+        />
         {/* Material Symbols Outlined variable font — uses custom axis params not supported by next/font */}
         {/* eslint-disable-next-line @next/next/no-page-custom-font */}
         <link
@@ -81,6 +78,7 @@ export default function RootLayout({
           rel="stylesheet"
         />
       </head>
+
       <body
         suppressHydrationWarning
         className={`${sora.variable} ${inter.variable} ${jetbrainsMono.variable} bg-background selection:bg-primary-container selection:text-on-primary-container`}

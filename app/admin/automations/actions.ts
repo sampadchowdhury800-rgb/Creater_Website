@@ -25,6 +25,15 @@ export async function createAutomation(formData: FormData) {
   const mediaItems = mediaJson ? JSON.parse(mediaJson) : [];
   const filesJson = formData.get("downloadableFiles") as string;
   const downloadableFiles = filesJson ? JSON.parse(filesJson) : [];
+  const faqsJson = formData.get("faqs") as string;
+  const faqs = faqsJson ? JSON.parse(faqsJson) : [];
+
+  const seoTitle = (formData.get("seoTitle") as string) || null;
+  const seoDescription = (formData.get("seoDescription") as string) || null;
+  const ogImage = (formData.get("ogImage") as string) || null;
+  const directAnswer = (formData.get("directAnswer") as string) || null;
+  const primaryTopic = (formData.get("primaryTopic") as string) || null;
+  const searchIntent = (formData.get("searchIntent") as string) || null;
 
   await prisma.automation.create({
     data: {
@@ -38,6 +47,13 @@ export async function createAutomation(formData: FormData) {
       categoryId: categoryId || null,
       features,
       requirements,
+      seoTitle,
+      seoDescription,
+      ogImage,
+      directAnswer,
+      primaryTopic,
+      searchIntent,
+      faqs,
       thumbnailUrl: mediaItems.find((m: any) => m.isPrimary)?.url || mediaItems[0]?.url || null,
       media: {
         create: mediaItems.map((m: any, idx: number) => ({
@@ -86,6 +102,15 @@ export async function updateAutomation(id: string, formData: FormData) {
   const mediaItems = mediaJson ? JSON.parse(mediaJson) : [];
   const filesJson = formData.get("downloadableFiles") as string;
   const downloadableFiles = filesJson ? JSON.parse(filesJson) : [];
+  const faqsJson = formData.get("faqs") as string;
+  const faqs = faqsJson ? JSON.parse(faqsJson) : [];
+
+  const seoTitle = (formData.get("seoTitle") as string) || null;
+  const seoDescription = (formData.get("seoDescription") as string) || null;
+  const ogImage = (formData.get("ogImage") as string) || null;
+  const directAnswer = (formData.get("directAnswer") as string) || null;
+  const primaryTopic = (formData.get("primaryTopic") as string) || null;
+  const searchIntent = (formData.get("searchIntent") as string) || null;
 
   // Transaction: Sync media and files
   await prisma.$transaction([
@@ -104,6 +129,13 @@ export async function updateAutomation(id: string, formData: FormData) {
         categoryId: categoryId || null,
         features,
         requirements,
+        seoTitle,
+        seoDescription,
+        ogImage,
+        directAnswer,
+        primaryTopic,
+        searchIntent,
+        faqs,
         thumbnailUrl: mediaItems.find((m: any) => m.isPrimary)?.url || mediaItems[0]?.url || null,
         media: {
           create: mediaItems.map((m: any, idx: number) => ({
@@ -128,6 +160,7 @@ export async function updateAutomation(id: string, formData: FormData) {
       },
     }),
   ]);
+
 
   revalidatePath("/admin/automations");
   revalidatePath(`/automations/${slug}`);

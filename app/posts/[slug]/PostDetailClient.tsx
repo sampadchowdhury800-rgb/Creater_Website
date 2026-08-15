@@ -12,15 +12,56 @@ import PromptModal from "@/components/PromptModal";
 import VideoCardComponent from "@/components/VideoCard";
 import { getYouTubeEmbedUrl } from "@/lib/youtube";
 import type { PostCard, ToolLink } from "@/lib/postTypes";
-import { Play, Camera, ExternalLink, Calendar, Clock, Tag as TagIcon, Sparkles, ArrowLeft, ChevronRight } from "lucide-react";
+import { Play, Camera, ExternalLink, Calendar, Clock, Tag as TagIcon, Sparkles, ArrowLeft, ChevronRight, ChevronDown } from "lucide-react";
+
+interface FaqItem {
+  question: string;
+  answer: string;
+  sortOrder?: number;
+}
 
 interface PostDetailClientProps {
   post: any;
   postCard: PostCard;
   recentPosts: PostCard[];
+  directAnswer?: string | null;
+  faqs?: FaqItem[];
 }
 
-export default function PostDetailClient({ post, postCard, recentPosts }: PostDetailClientProps) {
+function FaqAccordion({ faqs }: { faqs: FaqItem[] }) {
+  const [openIndex, setOpenIndex] = useState<number | null>(null);
+  if (!faqs || faqs.length === 0) return null;
+  const sorted = [...faqs].sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
+  return (
+    <section aria-label="Frequently Asked Questions" className="mb-10">
+      <h2 className="text-2xl font-bold text-white mb-4">Frequently Asked Questions</h2>
+      <div className="space-y-2">
+        {sorted.map((faq, idx) => (
+          <div key={idx} className="border border-white/10 rounded-xl overflow-hidden bg-white/[0.03]">
+            <button
+              type="button"
+              aria-expanded={openIndex === idx}
+              onClick={() => setOpenIndex(openIndex === idx ? null : idx)}
+              className="w-full flex items-center justify-between gap-4 px-5 py-4 text-left text-white font-semibold text-sm hover:bg-white/5 transition-colors"
+            >
+              <span>{faq.question}</span>
+              <ChevronDown
+                className={`w-4 h-4 shrink-0 text-cyan-400 transition-transform ${openIndex === idx ? 'rotate-180' : ''}`}
+              />
+            </button>
+            {openIndex === idx && (
+              <div className="px-5 pb-5 text-on-surface-variant text-sm leading-relaxed">
+                {faq.answer}
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+export default function PostDetailClient({ post, postCard, recentPosts, directAnswer, faqs = [] }: PostDetailClientProps) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
   const [modalSectionTitle, setModalSectionTitle] = useState("AI Prompts");
@@ -99,6 +140,17 @@ export default function PostDetailClient({ post, postCard, recentPosts }: PostDe
               )}
             </div>
           </div>
+
+          {/* AEO Direct Answer — visible for AI + human answer engines */}
+          {directAnswer && (
+            <div className="mb-6 p-5 rounded-2xl border border-cyan-500/30 bg-cyan-950/30" role="note" aria-label="Direct Answer">
+              <div className="flex items-center gap-2 mb-2">
+                <span className="material-symbols-outlined text-cyan-400 text-[18px]" aria-hidden="true">verified</span>
+                <span className="text-cyan-400 font-mono text-xs uppercase tracking-widest font-bold">Quick Answer</span>
+              </div>
+              <p className="text-white text-sm leading-relaxed">{directAnswer}</p>
+            </div>
+          )}
 
           {/* Main Media Player / Embed */}
           <div className="mb-8 rounded-2xl overflow-hidden border border-white/10 bg-black/60 shadow-2xl">
@@ -248,6 +300,11 @@ export default function PostDetailClient({ post, postCard, recentPosts }: PostDe
               )}
             </div>
           </div>
+
+          {/* FAQ Section — visible for AEO / FAQPage schema */}
+          {faqs.length > 0 && (
+            <FaqAccordion faqs={faqs} />
+          )}
 
           {/* Recommended / Recent Content */}
           {recentPosts.length > 0 && (

@@ -7,7 +7,7 @@ import { env } from "@/lib/env";
 export async function POST(req: Request) {
   const userId = await getCurrentUserId();
   if (!userId) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return NextResponse.json({ error: "Unauthorized. Please sign in." }, { status: 401 });
   }
 
   try {
@@ -131,8 +131,15 @@ export async function POST(req: Request) {
       currency: "INR",
       key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID || env.RAZORPAY_KEY_ID,
     });
-  } catch (error) {
-    console.error("Order creation failed:", error);
+  } catch (error: any) {
+    console.error("[Orders/Create Error]", {
+      message: error?.message || "Unknown error",
+      code: error?.code || error?.error?.code,
+      description: error?.error?.description,
+      field: error?.error?.field,
+      statusCode: error?.statusCode,
+    });
+
     return NextResponse.json(
       { error: "Failed to initialize order checkout." },
       { status: 500 }

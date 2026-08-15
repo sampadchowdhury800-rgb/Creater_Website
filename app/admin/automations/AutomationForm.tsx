@@ -6,6 +6,7 @@ import { createAutomation, updateAutomation } from "./actions";
 import { ArrowLeft, Save, Loader2, Image as ImageIcon, Video, Trash2, FileText, UploadCloud, Download } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
+import FaqEditor, { FaqItem } from "@/components/editor/FaqEditor";
 
 interface MediaItem {
   url: string;
@@ -47,7 +48,15 @@ export default function AutomationForm({ initialData, categories }: AutomationFo
     categoryId: initialData?.categoryId || "",
     features: initialData?.features?.join("\n") || "",
     requirements: initialData?.requirements?.join("\n") || "",
+    seoTitle: initialData?.seoTitle || "",
+    seoDescription: initialData?.seoDescription || "",
+    ogImage: initialData?.ogImage || "",
+    directAnswer: initialData?.directAnswer || "",
+    primaryTopic: initialData?.primaryTopic || "",
+    searchIntent: initialData?.searchIntent || "",
   });
+
+  const [faqs, setFaqs] = useState<FaqItem[]>((initialData?.faqs as FaqItem[]) || []);
 
   const [mediaItems, setMediaItems] = useState<MediaItem[]>(
     initialData?.media?.map((m: any) => ({
@@ -84,24 +93,16 @@ export default function AutomationForm({ initialData, categories }: AutomationFo
   const handleMediaUpload = async (e: React.ChangeEvent<HTMLInputElement>, type: "IMAGE" | "VIDEO") => {
     const files = e.target.files;
     if (!files || files.length === 0) return;
-
     setUploadingMedia(true);
     toast.info(`Uploading ${type.toLowerCase()}...`);
-
     try {
       const newItems: MediaItem[] = [];
       for (let i = 0; i < files.length; i++) {
         const file = files[i];
         const uploadData = new FormData();
         uploadData.append("file", file);
-
-        const res = await fetch("/api/admin/upload", {
-          method: "POST",
-          body: uploadData,
-        });
-
+        const res = await fetch("/api/admin/upload", { method: "POST", body: uploadData });
         if (!res.ok) throw new Error(`Upload failed for ${file.name}`);
-
         const data = await res.json();
         newItems.push({
           url: data.url,
@@ -110,10 +111,9 @@ export default function AutomationForm({ initialData, categories }: AutomationFo
           isPrimary: mediaItems.length === 0 && i === 0 && type === "IMAGE",
         });
       }
-
       setMediaItems((prev) => [...prev, ...newItems]);
       toast.success("Media upload complete!");
-    } catch (error) {
+    } catch {
       toast.error("Media upload failed");
     } finally {
       setUploadingMedia(false);
@@ -138,21 +138,14 @@ export default function AutomationForm({ initialData, categories }: AutomationFo
       toast.error("Only images can be set as primary thumbnail");
       return;
     }
-    setMediaItems((prev) =>
-      prev.map((item, i) => ({
-        ...item,
-        isPrimary: i === index,
-      }))
-    );
+    setMediaItems((prev) => prev.map((item, i) => ({ ...item, isPrimary: i === index })));
   };
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files || files.length === 0) return;
-
     setUploadingFiles(true);
     toast.info("Uploading downloadable resource...");
-
     try {
       const uploaded: DownloadableFileItem[] = [];
       for (let i = 0; i < files.length; i++) {
@@ -160,14 +153,8 @@ export default function AutomationForm({ initialData, categories }: AutomationFo
         const uploadData = new FormData();
         uploadData.append("file", file);
         uploadData.append("title", newFileTitle.trim() || file.name);
-
-        const res = await fetch("/api/admin/automations/files/upload", {
-          method: "POST",
-          body: uploadData,
-        });
-
+        const res = await fetch("/api/admin/automations/files/upload", { method: "POST", body: uploadData });
         if (!res.ok) throw new Error(`Upload failed for ${file.name}`);
-
         const data = await res.json();
         uploaded.push({
           title: data.title,
@@ -178,11 +165,10 @@ export default function AutomationForm({ initialData, categories }: AutomationFo
           fileType: data.fileType,
         });
       }
-
       setDownloadableFiles((prev) => [...prev, ...uploaded]);
       setNewFileTitle("");
       toast.success("Downloadable file attached successfully!");
-    } catch (error) {
+    } catch {
       toast.error("File upload failed.");
     } finally {
       setUploadingFiles(false);
@@ -198,15 +184,12 @@ export default function AutomationForm({ initialData, categories }: AutomationFo
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSaving(true);
-
     try {
       const payload = new FormData();
-      Object.entries(formData).forEach(([key, value]) => {
-        payload.append(key, value);
-      });
+      Object.entries(formData).forEach(([key, value]) => payload.append(key, value));
       payload.append("mediaItems", JSON.stringify(mediaItems));
       payload.append("downloadableFiles", JSON.stringify(downloadableFiles));
-
+      payload.append("faqs", JSON.stringify(faqs.filter((f) => f.question && f.answer)));
       if (isNew) {
         await createAutomation(payload);
       } else {
@@ -219,7 +202,7 @@ export default function AutomationForm({ initialData, categories }: AutomationFo
   };
 
   return (
-    <form onSubmit={handleSubmit} className="p-6 md:p-8 max-w-5xl mx-auto space-y-8">
+    <form onSubmit={handleSubmit} className="p-6 md:p-8 max-w-5xl mx-auto space-y-8 pb-20">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div className="flex items-center gap-4">
           <Link href="/admin/automations" className="p-2 text-on-surface-variant hover:text-white transition-colors">
@@ -233,10 +216,7 @@ export default function AutomationForm({ initialData, categories }: AutomationFo
           </div>
         </div>
         <div className="flex items-center gap-3">
-          <Link
-            href="/admin/automations"
-            className="px-4 py-2 text-on-surface-variant hover:text-white transition-colors"
-          >
+          <Link href="/admin/automations" className="px-4 py-2 text-on-surface-variant hover:text-white transition-colors">
             Cancel
           </Link>
           <button
@@ -251,94 +231,58 @@ export default function AutomationForm({ initialData, categories }: AutomationFo
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* Left 2 Cols: Details & Media & Files */}
+        {/* Left 2 Cols */}
         <div className="lg:col-span-2 space-y-6">
+
+          {/* Basic Details */}
           <div className="bg-[#1C1C1E] border border-white/10 rounded-2xl p-6 space-y-4">
             <h2 className="text-lg font-bold text-white mb-4">Basic Details</h2>
-
             <div>
               <label className="block text-sm font-medium text-on-surface-variant mb-2">Title</label>
-              <input
-                required
-                type="text"
-                name="title"
-                value={formData.title}
-                onChange={handleChange}
-                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-primary-fixed-dim focus:ring-1 focus:ring-primary-fixed-dim"
-                placeholder="e.g. AI Lead Generation Workflow"
-              />
+              <input required type="text" name="title" value={formData.title} onChange={handleChange}
+                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-primary-fixed-dim"
+                placeholder="e.g. AI Lead Generation Workflow" />
             </div>
-
             <div>
               <label className="block text-sm font-medium text-on-surface-variant mb-2">Slug</label>
-              <input
-                required
-                type="text"
-                name="slug"
-                value={formData.slug}
-                onChange={handleChange}
-                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-primary-fixed-dim focus:ring-1 focus:ring-primary-fixed-dim"
-              />
+              <input required type="text" name="slug" value={formData.slug} onChange={handleChange}
+                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-primary-fixed-dim" />
             </div>
-
             <div>
               <label className="block text-sm font-medium text-on-surface-variant mb-2">Short Description</label>
-              <input
-                type="text"
-                name="shortDesc"
-                value={formData.shortDesc}
-                onChange={handleChange}
-                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-primary-fixed-dim focus:ring-1 focus:ring-primary-fixed-dim"
-              />
+              <input type="text" name="shortDesc" value={formData.shortDesc} onChange={handleChange}
+                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-primary-fixed-dim" />
             </div>
-
             <div>
               <label className="block text-sm font-medium text-on-surface-variant mb-2">Detailed Description</label>
-              <textarea
-                name="description"
-                value={formData.description}
-                onChange={handleChange}
-                rows={8}
-                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-primary-fixed-dim focus:ring-1 focus:ring-primary-fixed-dim resize-y"
-              />
+              <textarea name="description" value={formData.description} onChange={handleChange} rows={8}
+                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-primary-fixed-dim resize-y" />
             </div>
           </div>
 
           {/* Features & Requirements */}
           <div className="bg-[#1C1C1E] border border-white/10 rounded-2xl p-6 space-y-4">
-            <h2 className="text-lg font-bold text-white mb-4">Features & Requirements</h2>
-
+            <h2 className="text-lg font-bold text-white mb-4">Features &amp; Requirements</h2>
             <div>
               <label className="block text-sm font-medium text-on-surface-variant mb-2">Features (One per line)</label>
-              <textarea
-                name="features"
-                value={formData.features}
-                onChange={handleChange}
-                rows={5}
-                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-primary-fixed-dim focus:ring-1 focus:ring-primary-fixed-dim resize-y"
-                placeholder="Automated email scraping&#10;CRM Webhook sync"
-              />
+              <textarea name="features" value={formData.features} onChange={handleChange} rows={5}
+                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-primary-fixed-dim resize-y"
+                placeholder="Automated email scraping&#10;CRM Webhook sync" />
             </div>
-
             <div>
               <label className="block text-sm font-medium text-on-surface-variant mb-2">Requirements (One per line)</label>
-              <textarea
-                name="requirements"
-                value={formData.requirements}
-                onChange={handleChange}
-                rows={5}
-                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-primary-fixed-dim focus:ring-1 focus:ring-primary-fixed-dim resize-y"
-                placeholder="Make.com or Zapier account&#10;OpenAI API Key"
-              />
+              <textarea name="requirements" value={formData.requirements} onChange={handleChange} rows={5}
+                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-primary-fixed-dim resize-y"
+                placeholder="Make.com or Zapier account&#10;OpenAI API Key" />
             </div>
           </div>
 
-          {/* Preview Media Gallery */}
+          {/* Preview Media */}
           <div className="bg-[#1C1C1E] border border-white/10 rounded-2xl p-6">
             <div className="flex justify-between items-center mb-4">
               <div>
                 <h2 className="text-lg font-bold text-white">Product Preview Media</h2>
-                <p className="text-xs text-on-surface-variant">Public thumbnails and preview videos shown on marketplace</p>
+                <p className="text-xs text-on-surface-variant">Public thumbnails and preview videos</p>
               </div>
               <div className="flex gap-2">
                 <label className="cursor-pointer flex items-center gap-2 px-3 py-1.5 bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg text-sm text-white transition-colors">
@@ -351,7 +295,6 @@ export default function AutomationForm({ initialData, categories }: AutomationFo
                 </label>
               </div>
             </div>
-
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
               {mediaItems.map((item, idx) => (
                 <div key={idx} className={`relative aspect-video rounded-lg overflow-hidden border-2 ${item.isPrimary ? "border-primary-fixed-dim" : "border-white/10"}`}>
@@ -360,7 +303,6 @@ export default function AutomationForm({ initialData, categories }: AutomationFo
                   ) : (
                     <Image src={item.url} alt="Gallery item" fill className="object-cover" />
                   )}
-
                   <div className="absolute inset-0 bg-black/50 opacity-0 hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-2">
                     <button type="button" onClick={() => removeMedia(idx)} className="p-2 bg-red-500 hover:bg-red-600 text-white rounded-full">
                       <Trash2 size={16} />
@@ -372,9 +314,7 @@ export default function AutomationForm({ initialData, categories }: AutomationFo
                     )}
                   </div>
                   {item.isPrimary && (
-                    <div className="absolute top-2 left-2 bg-primary-fixed-dim text-black text-xs font-bold px-2 py-1 rounded">
-                      Primary
-                    </div>
+                    <div className="absolute top-2 left-2 bg-primary-fixed-dim text-black text-xs font-bold px-2 py-1 rounded">Primary</div>
                   )}
                 </div>
               ))}
@@ -386,52 +326,30 @@ export default function AutomationForm({ initialData, categories }: AutomationFo
             </div>
           </div>
 
-          {/* Purchased Downloadable Product Files */}
-          <div className="bg-[#1C1C1E] border border-cyan-500/20 bg-cyan-500/[0.02] rounded-2xl p-6">
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4">
-              <div>
-                <h2 className="text-lg font-bold text-white flex items-center gap-2">
-                  <Download className="w-5 h-5 text-primary" />
-                  Purchased Downloadable Files
-                </h2>
-                <p className="text-xs text-on-surface-variant">
-                  Protected resources delivered only to customers after confirmed payment (ZIP, JSON, PDF, scripts)
-                </p>
-              </div>
+          {/* Downloadable Files */}
+          <div className="bg-[#1C1C1E] border border-cyan-500/20 rounded-2xl p-6">
+            <div className="mb-4">
+              <h2 className="text-lg font-bold text-white flex items-center gap-2">
+                <Download className="w-5 h-5 text-primary" />
+                Purchased Downloadable Files
+              </h2>
+              <p className="text-xs text-on-surface-variant">Protected resources delivered after confirmed payment</p>
             </div>
-
-            {/* Custom label & Upload trigger */}
             <div className="flex flex-col sm:flex-row gap-3 mb-4">
-              <input
-                type="text"
-                placeholder="Resource title (e.g. Lead Gen Workflow v1.0)"
-                value={newFileTitle}
+              <input type="text" placeholder="Resource title (e.g. Lead Gen Workflow v1.0)" value={newFileTitle}
                 onChange={(e) => setNewFileTitle(e.target.value)}
-                className="flex-1 bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-sm text-white focus:outline-none focus:border-primary"
-              />
+                className="flex-1 bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-sm text-white focus:outline-none focus:border-primary" />
               <label className="cursor-pointer flex items-center justify-center gap-2 px-4 py-2 bg-primary text-black font-bold rounded-xl text-sm hover:bg-primary-fixed transition-colors">
                 <UploadCloud size={16} />
                 {uploadingFiles ? "Uploading..." : "Upload Resource"}
-                <input
-                  type="file"
-                  className="hidden"
-                  onChange={handleFileUpload}
-                  disabled={uploadingFiles}
-                />
+                <input type="file" className="hidden" onChange={handleFileUpload} disabled={uploadingFiles} />
               </label>
             </div>
-
-            {/* Attached files list */}
             <div className="space-y-2">
               {downloadableFiles.map((file, idx) => (
-                <div
-                  key={idx}
-                  className="flex items-center justify-between p-3.5 bg-white/5 border border-white/10 rounded-xl hover:border-white/20 transition-colors"
-                >
+                <div key={idx} className="flex items-center justify-between p-3.5 bg-white/5 border border-white/10 rounded-xl hover:border-white/20 transition-colors">
                   <div className="flex items-center gap-3 min-w-0">
-                    <div className="p-2 bg-primary/10 rounded-lg text-primary shrink-0">
-                      <FileText size={20} />
-                    </div>
+                    <div className="p-2 bg-primary/10 rounded-lg text-primary shrink-0"><FileText size={20} /></div>
                     <div className="min-w-0">
                       <p className="text-sm font-bold text-white truncate">{file.title}</p>
                       <p className="text-xs text-on-surface-variant truncate">
@@ -439,22 +357,63 @@ export default function AutomationForm({ initialData, categories }: AutomationFo
                       </p>
                     </div>
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => removeDownloadableFile(idx)}
-                    className="p-2 text-red-400 hover:text-red-300 hover:bg-red-400/10 rounded-lg transition-colors ml-3"
-                    title="Remove resource"
-                  >
+                  <button type="button" onClick={() => removeDownloadableFile(idx)}
+                    className="p-2 text-red-400 hover:text-red-300 hover:bg-red-400/10 rounded-lg transition-colors ml-3" title="Remove resource">
                     <Trash2 size={16} />
                   </button>
                 </div>
               ))}
-
               {downloadableFiles.length === 0 && (
                 <div className="py-8 text-center text-on-surface-variant border-2 border-dashed border-white/10 rounded-xl text-sm">
                   No downloadable product files attached yet.
                 </div>
               )}
+            </div>
+          </div>
+
+          {/* SEO & AEO */}
+          <div className="bg-[#1C1C1E] border border-white/10 rounded-2xl p-6 space-y-4">
+            <h2 className="text-base font-bold text-white mb-2">SEO &amp; AEO (Answer Engine Optimization)</h2>
+            <div className="p-4 rounded-xl bg-cyan-950/20 border border-cyan-500/30 space-y-2">
+              <label className="block text-xs font-mono text-cyan-400 font-bold uppercase tracking-wider">Direct Answer (AEO)</label>
+              <textarea name="directAnswer" rows={3} value={formData.directAnswer} onChange={handleChange}
+                className="w-full bg-[#0A0D14] border border-cyan-500/30 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-cyan-400"
+                placeholder="Direct concise summary of what this automation workflow accomplishes..." />
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs font-medium text-on-surface-variant mb-1">Primary Topic / Entity</label>
+                <input type="text" name="primaryTopic" value={formData.primaryTopic} onChange={handleChange}
+                  className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-primary-fixed-dim"
+                  placeholder="e.g. Cold Email, CRM Sync" />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-on-surface-variant mb-1">Search Intent</label>
+                <input type="text" name="searchIntent" value={formData.searchIntent} onChange={handleChange}
+                  className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-primary-fixed-dim"
+                  placeholder="e.g. Commercial / Product Purchase" />
+              </div>
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-on-surface-variant mb-1">SEO Title (Optional Override)</label>
+              <input type="text" name="seoTitle" value={formData.seoTitle} onChange={handleChange}
+                className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-primary-fixed-dim"
+                placeholder="Defaults to: Title | Chowdhury Duo Automations" />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-on-surface-variant mb-1">SEO Description (Optional Override)</label>
+              <textarea name="seoDescription" rows={2} value={formData.seoDescription} onChange={handleChange}
+                className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-primary-fixed-dim"
+                placeholder="Defaults to: Short Description" />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-on-surface-variant mb-1">OG Image URL</label>
+              <input type="text" name="ogImage" value={formData.ogImage} onChange={handleChange}
+                className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-primary-fixed-dim"
+                placeholder="https://..." />
+            </div>
+            <div className="pt-4 border-t border-white/10">
+              <FaqEditor faqs={faqs} onChange={(updatedFaqs) => setFaqs(updatedFaqs)} />
             </div>
           </div>
         </div>
@@ -463,60 +422,33 @@ export default function AutomationForm({ initialData, categories }: AutomationFo
         <div className="space-y-6">
           <div className="bg-[#1C1C1E] border border-white/10 rounded-2xl p-6 space-y-4">
             <h2 className="text-lg font-bold text-white mb-4">Pricing</h2>
-
             <div>
               <label className="block text-sm font-medium text-on-surface-variant mb-2">Price (INR)</label>
-              <input
-                required
-                type="number"
-                name="price"
-                min="0"
-                step="1"
-                value={formData.price}
-                onChange={handleChange}
-                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-primary-fixed-dim focus:ring-1 focus:ring-primary-fixed-dim"
-              />
+              <input required type="number" name="price" min="0" step="1" value={formData.price} onChange={handleChange}
+                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-primary-fixed-dim" />
             </div>
-
             <div>
               <label className="block text-sm font-medium text-on-surface-variant mb-2">Original Price (INR - Optional)</label>
-              <input
-                type="number"
-                name="originalPrice"
-                min="0"
-                step="1"
-                value={formData.originalPrice}
-                onChange={handleChange}
-                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-primary-fixed-dim focus:ring-1 focus:ring-primary-fixed-dim"
-              />
+              <input type="number" name="originalPrice" min="0" step="1" value={formData.originalPrice} onChange={handleChange}
+                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-primary-fixed-dim" />
             </div>
           </div>
 
           <div className="bg-[#1C1C1E] border border-white/10 rounded-2xl p-6 space-y-4">
             <h2 className="text-lg font-bold text-white mb-4">Organization</h2>
-
             <div>
               <label className="block text-sm font-medium text-on-surface-variant mb-2">Status</label>
-              <select
-                name="status"
-                value={formData.status}
-                onChange={handleChange}
-                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-primary-fixed-dim focus:ring-1 focus:ring-primary-fixed-dim [&>option]:bg-[#1C1C1E]"
-              >
+              <select name="status" value={formData.status} onChange={handleChange}
+                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-primary-fixed-dim [&>option]:bg-[#1C1C1E]">
                 <option value="DRAFT">Draft</option>
                 <option value="PUBLISHED">Published</option>
                 <option value="ARCHIVED">Archived</option>
               </select>
             </div>
-
             <div>
               <label className="block text-sm font-medium text-on-surface-variant mb-2">Category</label>
-              <select
-                name="categoryId"
-                value={formData.categoryId}
-                onChange={handleChange}
-                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-primary-fixed-dim focus:ring-1 focus:ring-primary-fixed-dim [&>option]:bg-[#1C1C1E]"
-              >
+              <select name="categoryId" value={formData.categoryId} onChange={handleChange}
+                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-primary-fixed-dim [&>option]:bg-[#1C1C1E]">
                 <option value="">Select Category...</option>
                 {categories.map((cat: any) => (
                   <option key={cat.id} value={cat.id}>{cat.name}</option>

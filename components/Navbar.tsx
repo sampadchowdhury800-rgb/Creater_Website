@@ -60,46 +60,26 @@ export default function Navbar({ videos, onMenuOpen }: NavbarProps) {
       </Link>
 
       {/* Desktop nav */}
-      <nav className="hidden md:flex items-center gap-6 font-label-caps text-label-caps">
+      <nav className="hidden md:flex items-center gap-5 font-label-caps text-label-caps">
         <Link
-          href="/#videos"
-          onClick={handleVideosClick}
+          href="/about"
           className="text-on-tertiary-fixed-variant dark:text-on-surface-variant font-medium hover:text-primary-fixed-dim dark:hover:text-primary-fixed transition-all duration-300 ease-out"
         >
-          Videos
+          About
         </Link>
 
-        {/* Portfolio dropdown */}
-        <div className="relative group">
-          <button className="text-on-tertiary-fixed-variant dark:text-on-surface-variant font-medium hover:text-primary-fixed-dim dark:hover:text-primary-fixed transition-all duration-300 ease-out flex items-center gap-1 cursor-pointer">
-            Portfolio{" "}
-            <span className="material-symbols-outlined text-[14px]">
-              expand_more
-            </span>
-          </button>
-          <div className="absolute top-full left-0 mt-4 w-56 bg-white/95 dark:bg-surface-container-low/95 backdrop-blur-2xl border border-black/5 dark:border-white/10 rounded-xl py-2 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 shadow-2xl">
-            <a
-              className="block px-4 py-3 hover:bg-black/5 dark:hover:bg-white/5 transition-colors text-on-tertiary-fixed dark:text-on-surface"
-              href="https://mine-portfolio.pages.dev/"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              Sampad Chowdhury
-            </a>
-            <Link
-              className="block px-4 py-3 hover:bg-black/5 dark:hover:bg-white/5 transition-colors text-on-tertiary-fixed dark:text-on-surface"
-              href="/bharti-shaw"
-            >
-              Bharti Shaw
-            </Link>
-          </div>
-        </div>
-
         <Link
-          href="/achievements"
+          href="/services"
           className="text-on-tertiary-fixed-variant dark:text-on-surface-variant font-medium hover:text-primary-fixed-dim dark:hover:text-primary-fixed transition-all duration-300 ease-out"
         >
-          Achievements
+          Services
+        </Link>
+
+        <Link
+          href="/projects"
+          className="text-on-tertiary-fixed-variant dark:text-on-surface-variant font-medium hover:text-primary-fixed-dim dark:hover:text-primary-fixed transition-all duration-300 ease-out"
+        >
+          Projects
         </Link>
 
         <Link
@@ -109,12 +89,37 @@ export default function Navbar({ videos, onMenuOpen }: NavbarProps) {
           Automations
         </Link>
 
+        {/* Portfolio dropdown */}
+        <div className="relative group">
+          <button className="text-on-tertiary-fixed-variant dark:text-on-surface-variant font-medium hover:text-primary-fixed-dim dark:hover:text-primary-fixed transition-all duration-300 ease-out flex items-center gap-1 cursor-pointer">
+            Profiles{" "}
+            <span className="material-symbols-outlined text-[14px]">
+              expand_more
+            </span>
+          </button>
+          <div className="absolute top-full left-0 mt-4 w-56 bg-white/95 dark:bg-surface-container-low/95 backdrop-blur-2xl border border-black/5 dark:border-white/10 rounded-xl py-2 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 shadow-2xl">
+            <Link
+              className="block px-4 py-3 hover:bg-black/5 dark:hover:bg-white/5 transition-colors text-on-tertiary-fixed dark:text-on-surface text-sm"
+              href="/resume"
+            >
+              Sampad Chowdhury (Resume)
+            </Link>
+            <Link
+              className="block px-4 py-3 hover:bg-black/5 dark:hover:bg-white/5 transition-colors text-on-tertiary-fixed dark:text-on-surface text-sm"
+              href="/bharti-shaw"
+            >
+              Bharti Shaw
+            </Link>
+          </div>
+        </div>
+
         <Link
           href="/news"
           className="text-on-tertiary-fixed-variant dark:text-on-surface-variant font-medium hover:text-primary-fixed-dim dark:hover:text-primary-fixed transition-all duration-300 ease-out"
         >
           News
         </Link>
+
 
         {/* Socials dropdown */}
         <div className="relative group">
@@ -249,6 +254,7 @@ export default function Navbar({ videos, onMenuOpen }: NavbarProps) {
           className="p-2 rounded-full hover:bg-black/10 dark:hover:bg-white/10 transition-colors cursor-pointer"
           onClick={toggleTheme}
           title="Toggle Theme"
+          aria-label="Toggle light or dark theme"
         >
           {theme === "light" ? (
             <span className="material-symbols-outlined text-primary-fixed-dim">
@@ -287,7 +293,11 @@ export default function Navbar({ videos, onMenuOpen }: NavbarProps) {
         </div>
 
         {/* Mobile menu button */}
-        <button className="md:hidden p-2 cursor-pointer" onClick={onMenuOpen}>
+        <button
+          className="md:hidden p-2 cursor-pointer"
+          onClick={onMenuOpen}
+          aria-label="Open mobile navigation menu"
+        >
           <span className="material-symbols-outlined text-on-tertiary-fixed dark:text-on-surface">
             menu
           </span>

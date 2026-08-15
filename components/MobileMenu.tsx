@@ -173,11 +173,27 @@ export default function MobileMenu({ isOpen, onClose, videos }: MobileMenuProps)
           </Link>
 
           <Link
-            href="/#videos"
-            onClick={handleVideosClick}
+            href="/about"
             className="text-on-tertiary-fixed dark:text-on-surface hover:text-primary-fixed-dim dark:hover:text-primary transition-colors text-left"
+            onClick={onClose}
           >
-            Videos
+            About
+          </Link>
+
+          <Link
+            href="/services"
+            className="text-on-tertiary-fixed dark:text-on-surface hover:text-primary-fixed-dim dark:hover:text-primary transition-colors text-left"
+            onClick={onClose}
+          >
+            Services
+          </Link>
+
+          <Link
+            href="/projects"
+            className="text-on-tertiary-fixed dark:text-on-surface hover:text-primary-fixed-dim dark:hover:text-primary transition-colors text-left"
+            onClick={onClose}
+          >
+            Projects
           </Link>
 
           <Link
@@ -190,19 +206,17 @@ export default function MobileMenu({ isOpen, onClose, videos }: MobileMenuProps)
 
           <div className="flex flex-col gap-2">
             <span className="text-on-tertiary-fixed dark:text-on-surface cursor-default text-[20px]">
-              Portfolio
+              Profiles
             </span>
             <div className="flex flex-col gap-2.5 pl-4 border-l border-black/10 dark:border-white/10 mt-1">
-              <a
+              <Link
                 className="text-on-tertiary-fixed-variant dark:text-on-surface-variant hover:text-primary-fixed-dim dark:hover:text-primary transition-colors text-[16px] flex items-center gap-2"
-                href="https://mine-portfolio.pages.dev/"
-                target="_blank"
-                rel="noopener noreferrer"
+                href="/resume"
                 onClick={onClose}
               >
-                <span className="material-symbols-outlined text-[16px]">person</span>{" "}
-                Sampad Chowdhury
-              </a>
+                <span className="material-symbols-outlined text-[16px]">description</span>{" "}
+                Sampad Chowdhury (Resume)
+              </Link>
               <Link
                 className="text-on-tertiary-fixed-variant dark:text-on-surface-variant hover:text-primary-fixed-dim dark:hover:text-primary transition-colors text-[16px] flex items-center gap-2"
                 href="/bharti-shaw"
@@ -229,6 +243,7 @@ export default function MobileMenu({ isOpen, onClose, videos }: MobileMenuProps)
           >
             News
           </Link>
+
 
           {/* Socials */}
           <div className="pt-6 mt-4 border-t border-black/10 dark:border-white/10">

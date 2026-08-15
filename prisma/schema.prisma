@@ -82,6 +82,12 @@ model Post {
   noindex        Boolean  @default(false)
   nofollow       Boolean  @default(false)
   readingTime    Int?     // in minutes
+
+  // AEO & Future-Proof Search Fields
+  directAnswer   String?  @db.Text
+  searchIntent   String?
+  primaryTopic   String?
+  faqs           Json?    // Array of { question: string, answer: string, sortOrder?: number }
   
   status         Status   @default(DRAFT)
   createdAt      DateTime @default(now())
@@ -164,6 +170,118 @@ model PageVisit {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// SERVICES & SOLUTIONS
+// ─────────────────────────────────────────────────────────────────────────────
+
+model Service {
+  id           String   @id @default(cuid())
+  name         String
+  slug         String   @unique
+  shortDesc    String?  @db.Text
+  fullDesc     String?  @db.Text
+  category     String?
+  features     String[]
+  technologies String[]
+  useCases     String[]
+  icon         String?
+  coverImage   String?
+  sortOrder    Int      @default(0)
+  status       Status   @default(PUBLISHED)
+
+  // AEO & SEO Fields
+  directAnswer   String? @db.Text
+  seoTitle       String?
+  seoDescription String?
+  ogImage        String?
+  faqs           Json?   // Array of { question: string, answer: string, sortOrder?: number }
+
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// PROJECTS & PORTFOLIO (Case Studies, distinct from Automations for sale)
+// ─────────────────────────────────────────────────────────────────────────────
+
+model Project {
+  id           String   @id @default(cuid())
+  title        String
+  slug         String   @unique
+  shortDesc    String?  @db.Text
+  fullDesc     String?  @db.Text
+  client       String?
+  role         String?
+  technologies String[]
+  problem      String?  @db.Text
+  solution     String?  @db.Text
+  result       String?  @db.Text
+  images       String[]
+  videoUrl     String?
+  demoUrl      String?
+  githubUrl    String?
+  sortOrder    Int      @default(0)
+  status       Status   @default(PUBLISHED)
+
+  // AEO & SEO Fields
+  directAnswer   String? @db.Text
+  seoTitle       String?
+  seoDescription String?
+  ogImage        String?
+  faqs           Json?   // Array of { question: string, answer: string, sortOrder?: number }
+
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// PEOPLE / FOUNDERS / PERSONAL BRAND ENTITY
+// ─────────────────────────────────────────────────────────────────────────────
+
+model Person {
+  id           String   @id @default(cuid())
+  name         String
+  slug         String   @unique
+  title        String
+  shortBio     String?  @db.Text
+  bio          String?  @db.Text
+  avatarUrl    String?
+  email        String?
+  location     String?
+  linkedin     String?
+  github       String?
+  youtube      String?
+  instagram    String?
+  website      String?
+  education    Json?    // Array of { degree: string, institution: string, year?: string, details?: string }
+  experience   Json?    // Array of { role: string, company: string, period?: string, description?: string, highlights?: string[] }
+  skills       String[]
+  achievements String[]
+  isFounder    Boolean  @default(true)
+  sortOrder    Int      @default(0)
+
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SOCIAL PROFILES / OFFICIAL ENTITY LINKS
+// ─────────────────────────────────────────────────────────────────────────────
+
+model SocialProfile {
+  id         String   @id @default(cuid())
+  platform   String
+  label      String
+  url        String
+  icon       String?
+  color      String?
+  isOfficial Boolean  @default(true)
+  sortOrder  Int      @default(0)
+
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // AUTOMATIONS MARKETPLACE
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -193,6 +311,15 @@ model Automation {
   // Denormalized counters for fast sort — updated on review create/delete
   ratingSum       Int                 @default(0)
   reviewCount     Int                 @default(0)
+
+  // SEO & AEO Future-Proof Fields
+  seoTitle        String?
+  seoDescription  String?
+  ogImage         String?
+  directAnswer    String?             @db.Text
+  primaryTopic    String?
+  searchIntent    String?
+  faqs            Json?
 
   createdAt       DateTime            @default(now())
   updatedAt       DateTime            @updatedAt
@@ -448,3 +575,4 @@ enum PaymentStatus {
   FAILED
   REFUNDED
 }
+
