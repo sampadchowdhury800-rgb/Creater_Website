@@ -26,10 +26,16 @@
 /* ─────────────────────────────────────────────────────────────────────────
    Base body styles
 ───────────────────────────────────────────────────────────────────────── */
+html {
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+
 body {
   background-color: #131313;
   color: #e5e2e1;
   overflow-x: hidden;
+  min-height: 100vh;
   transition: background-color 0.3s ease, color 0.3s ease;
 }
 .light body {

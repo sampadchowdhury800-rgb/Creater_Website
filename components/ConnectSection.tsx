@@ -23,21 +23,23 @@ export default function ConnectSection() {
 
   // Lock body scroll when modal is open
   useEffect(() => {
-    if (isOpen) {
-      document.body.style.overflow = "hidden";
-    } else {
-      document.body.style.overflow = "unset";
-      // Reset state if closed
-      if (!isOpen) {
-         setTimeout(() => {
-            setIsSuccess(false);
-            setErrors({});
-         }, 300);
-      }
-    }
+    if (!isOpen) return;
+    const originalOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
     return () => {
-      document.body.style.overflow = "unset";
+      document.body.style.overflow = originalOverflow;
     };
+  }, [isOpen]);
+
+  // Reset form errors when modal closes
+  useEffect(() => {
+    if (!isOpen) {
+      const timer = setTimeout(() => {
+        setIsSuccess(false);
+        setErrors({});
+      }, 300);
+      return () => clearTimeout(timer);
+    }
   }, [isOpen]);
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {

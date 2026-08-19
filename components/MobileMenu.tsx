@@ -19,9 +19,11 @@ export default function MobileMenu({ isOpen, onClose, videos }: MobileMenuProps)
 
   // Lock body scroll when open
   useEffect(() => {
-    document.body.style.overflow = isOpen ? "hidden" : "";
+    if (!isOpen) return;
+    const originalOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
     return () => {
-      document.body.style.overflow = "";
+      document.body.style.overflow = originalOverflow;
     };
   }, [isOpen]);
 

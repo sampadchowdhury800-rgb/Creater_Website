@@ -63,6 +63,14 @@ export function buildDynamicMetadata(opts: DynamicSeoOptions): Metadata {
     description: metaDescription,
     keywords: keywordsArray,
     metadataBase: new URL(siteConfig.url),
+    icons: {
+      icon: [
+        { url: "/icon.png", type: "image/png" },
+        { url: "/favicon.ico", sizes: "any" },
+      ],
+      shortcut: "/favicon.ico",
+      apple: "/apple-icon.png",
+    },
     alternates: {
       canonical: canonicalUrl,
     },
