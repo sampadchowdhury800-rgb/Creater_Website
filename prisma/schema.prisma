@@ -295,12 +295,15 @@ model Automation {
   description     String?             @db.Text
   features        String[]
   requirements    String[]
+  integrations    String[]            @default([])
 
   // Pricing — stored in paise (1 INR = 100 paise) to avoid float arithmetic
   price           Int                 // current selling price in paise
   originalPrice   Int?                // original / crossed-out price in paise
   discountPercent Int?                // convenience field (not used for calculation)
   currency        String              @default("INR")
+  pricingType     PricingType         @default(ONE_TIME)
+  featured        Boolean             @default(false)
 
   categoryId      String?
   category        AutomationCategory? @relation(fields: [categoryId], references: [id])
@@ -331,6 +334,7 @@ model Automation {
   cartItems       CartItem[]
   wishlistItems   WishlistItem[]
   orderItems      OrderItem[]
+  userAutomations UserAutomation[]
 }
 
 /// Images and videos attached to an automation product.
@@ -576,3 +580,36 @@ enum PaymentStatus {
   REFUNDED
 }
 
+
+
+// ─────────────────────────────────────────────────────────────────────────────
+// USER AUTOMATION RELATIONSHIP & WORKSPACE FOUNDATION
+// ─────────────────────────────────────────────────────────────────────────────
+
+model UserAutomation {
+  id           String               @id @default(cuid())
+  clerkUserId  String
+  automationId String
+  automation   Automation           @relation(fields: [automationId], references: [id], onDelete: Cascade)
+  status       UserAutomationStatus @default(NOT_CONFIGURED)
+  config       Json?
+  createdAt    DateTime             @default(now())
+  updatedAt    DateTime             @updatedAt
+
+  @@unique([clerkUserId, automationId])
+  @@index([clerkUserId])
+}
+
+enum UserAutomationStatus {
+  NOT_CONFIGURED
+  ACTIVE
+  PAUSED
+  PENDING
+  DISABLED
+}
+
+enum PricingType {
+  ONE_TIME
+  SUBSCRIPTION
+  FREE
+}

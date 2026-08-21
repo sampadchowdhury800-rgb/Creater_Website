@@ -82,6 +82,13 @@ export default function Navbar({ videos, onMenuOpen }: NavbarProps) {
           Projects
         </Link>
 
+
+        <Link
+          href="/my-automations"
+          className="text-on-tertiary-fixed-variant dark:text-on-surface-variant font-medium hover:text-primary-fixed-dim dark:hover:text-primary-fixed transition-all duration-300 ease-out flex items-center gap-1"
+        >
+          <span>My Automations</span>
+        </Link>
         <Link
           href="/automations"
           className="text-on-tertiary-fixed-variant dark:text-on-surface-variant font-medium hover:text-primary-fixed-dim dark:hover:text-primary-fixed transition-all duration-300 ease-out"

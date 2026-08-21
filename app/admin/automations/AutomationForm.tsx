@@ -48,6 +48,9 @@ export default function AutomationForm({ initialData, categories }: AutomationFo
     categoryId: initialData?.categoryId || "",
     features: initialData?.features?.join("\n") || "",
     requirements: initialData?.requirements?.join("\n") || "",
+    integrations: initialData?.integrations?.join("\n") || "",
+    pricingType: initialData?.pricingType || "ONE_TIME",
+    featured: initialData?.featured ? "true" : "false",
     seoTitle: initialData?.seoTitle || "",
     seoDescription: initialData?.seoDescription || "",
     ogImage: initialData?.ogImage || "",
@@ -275,6 +278,13 @@ export default function AutomationForm({ initialData, categories }: AutomationFo
                 className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-primary-fixed-dim resize-y"
                 placeholder="Make.com or Zapier account&#10;OpenAI API Key" />
             </div>
+            <div>
+              <label className="block text-sm font-medium text-on-surface-variant mb-2">Integrations & Apps (One per line)</label>
+              <textarea name="integrations" value={formData.integrations} onChange={handleChange} rows={4}
+                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-primary-fixed-dim resize-y"
+                placeholder="Gmail&#10;OpenAI&#10;Make.com&#10;Slack" />
+            </div>
+
           </div>
 
           {/* Preview Media */}
@@ -423,6 +433,16 @@ export default function AutomationForm({ initialData, categories }: AutomationFo
           <div className="bg-[#1C1C1E] border border-white/10 rounded-2xl p-6 space-y-4">
             <h2 className="text-lg font-bold text-white mb-4">Pricing</h2>
             <div>
+              <label className="block text-sm font-medium text-on-surface-variant mb-2">Pricing Type</label>
+              <select name="pricingType" value={formData.pricingType} onChange={handleChange}
+                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-primary-fixed-dim [&>option]:bg-[#1C1C1E]">
+                <option value="ONE_TIME">One-time Purchase</option>
+                <option value="SUBSCRIPTION">Monthly Subscription</option>
+                <option value="FREE">Free Product</option>
+              </select>
+            </div>
+
+            <div>
               <label className="block text-sm font-medium text-on-surface-variant mb-2">Price (INR)</label>
               <input required type="number" name="price" min="0" step="1" value={formData.price} onChange={handleChange}
                 className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-primary-fixed-dim" />
@@ -436,6 +456,16 @@ export default function AutomationForm({ initialData, categories }: AutomationFo
 
           <div className="bg-[#1C1C1E] border border-white/10 rounded-2xl p-6 space-y-4">
             <h2 className="text-lg font-bold text-white mb-4">Organization</h2>
+
+            <div className="flex items-center gap-3 pt-2">
+              <input type="checkbox" id="featured" name="featured" checked={formData.featured === "true"} 
+                onChange={(e) => setFormData(prev => ({ ...prev, featured: e.target.checked ? "true" : "false" }))}
+                className="w-5 h-5 accent-primary rounded cursor-pointer" />
+              <label htmlFor="featured" className="text-sm font-medium text-white cursor-pointer">
+                Feature on Marketplace Hero
+              </label>
+            </div>
+
             <div>
               <label className="block text-sm font-medium text-on-surface-variant mb-2">Status</label>
               <select name="status" value={formData.status} onChange={handleChange}

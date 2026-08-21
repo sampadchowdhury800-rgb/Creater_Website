@@ -198,6 +198,14 @@ export default function MobileMenu({ isOpen, onClose, videos }: MobileMenuProps)
             Projects
           </Link>
 
+
+          <Link
+            href="/my-automations"
+            className="text-on-tertiary-fixed dark:text-on-surface hover:text-primary-fixed-dim dark:hover:text-primary transition-colors text-left"
+            onClick={onClose}
+          >
+            My Automations
+          </Link>
           <Link
             href="/automations"
             className="text-on-tertiary-fixed dark:text-on-surface hover:text-primary-fixed-dim dark:hover:text-primary transition-colors text-left"

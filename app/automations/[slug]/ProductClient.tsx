@@ -23,6 +23,7 @@ export default function ProductClient({ automation }: ProductClientProps) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [isAddingToCart, setIsAddingToCart] = useState(false);
   const [isBuyingNow, setIsBuyingNow] = useState(false);
+  const [isAddingToMyAutomations, setIsAddingToMyAutomations] = useState(false);
   const { userId, openSignIn } = useAuth();
   const router = useRouter();
 
@@ -137,6 +138,32 @@ export default function ProductClient({ automation }: ProductClientProps) {
     }
   };
 
+
+  const handleAddToMyAutomations = async () => {
+    if (!userId) {
+      openSignIn();
+      return;
+    }
+
+    setIsAddingToMyAutomations(true);
+    try {
+      const res = await fetch("/api/user-automations", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ automationId: automation.id }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed to add to My Automations");
+      toast.success("Added to My Automations!");
+      router.push("/my-automations");
+    } catch (err: any) {
+      toast.error(err.message || "Failed to add to My Automations.");
+    } finally {
+      setIsAddingToMyAutomations(false);
+    }
+  };
+
   const handleWishlist = async () => {
     if (!userId) {
       openSignIn();
@@ -213,6 +240,25 @@ export default function ProductClient({ automation }: ProductClientProps) {
 
               {/* Action Buttons: Buy Now, Add to Cart, Wishlist, Share */}
               <div className="flex flex-col gap-3 mb-8">
+
+                <button
+                  onClick={handleAddToMyAutomations}
+                  disabled={isAddingToMyAutomations}
+                  className="w-full py-3.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl transition-all active:scale-95 flex items-center justify-center gap-2 shadow-md cursor-pointer disabled:opacity-70"
+                >
+                  {isAddingToMyAutomations ? (
+                    <>
+                      <Loader2 className="w-5 h-5 animate-spin" />
+                      <span>Adding to Workspace...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Zap className="w-5 h-5" />
+                      <span>Add to My Automations</span>
+                    </>
+                  )}
+                </button>
+
                 <button
                   onClick={handleBuyNow}
                   disabled={isBuyingNow}
@@ -255,6 +301,20 @@ export default function ProductClient({ automation }: ProductClientProps) {
               {/* Features & Requirements */}
               {(automation.features?.length > 0 || automation.requirements?.length > 0) && (
                 <div className="border-t border-white/10 pt-8 mt-4 flex flex-col gap-8">
+
+                  {automation.integrations?.length > 0 && (
+                    <div>
+                      <h3 className="text-xl font-bold text-white mb-4">Supported Integrations</h3>
+                      <div className="flex flex-wrap gap-2">
+                        {automation.integrations.map((ig: string, idx: number) => (
+                          <span key={idx} className="px-3 py-1.5 bg-blue-500/10 border border-blue-400/20 text-blue-300 text-sm font-semibold rounded-lg">
+                            {ig}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
                   {automation.features?.length > 0 && (
                     <div>
                       <h3 className="text-xl font-bold text-white mb-4">Features</h3>

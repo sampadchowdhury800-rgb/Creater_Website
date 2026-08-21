@@ -21,6 +21,9 @@ export async function createAutomation(formData: FormData) {
   // Extract arrays
   const features = (formData.get("features") as string)?.split("\n").filter(Boolean) || [];
   const requirements = (formData.get("requirements") as string)?.split("\n").filter(Boolean) || [];
+  const integrations = (formData.get("integrations") as string)?.split("\n").filter(Boolean) || [];
+  const pricingType = (formData.get("pricingType") as any) || "ONE_TIME";
+  const featured = formData.get("featured") === "true";
   const mediaJson = formData.get("mediaItems") as string;
   const mediaItems = mediaJson ? JSON.parse(mediaJson) : [];
   const filesJson = formData.get("downloadableFiles") as string;
@@ -47,6 +50,9 @@ export async function createAutomation(formData: FormData) {
       categoryId: categoryId || null,
       features,
       requirements,
+      integrations,
+      pricingType,
+      featured,
       seoTitle,
       seoDescription,
       ogImage,
@@ -80,6 +86,7 @@ export async function createAutomation(formData: FormData) {
 
   revalidatePath("/admin/automations");
   revalidatePath("/automations");
+  revalidatePath("/my-automations");
   redirect("/admin/automations");
 }
 
@@ -98,6 +105,9 @@ export async function updateAutomation(id: string, formData: FormData) {
 
   const features = (formData.get("features") as string)?.split("\n").filter(Boolean) || [];
   const requirements = (formData.get("requirements") as string)?.split("\n").filter(Boolean) || [];
+  const integrations = (formData.get("integrations") as string)?.split("\n").filter(Boolean) || [];
+  const pricingType = (formData.get("pricingType") as any) || "ONE_TIME";
+  const featured = formData.get("featured") === "true";
   const mediaJson = formData.get("mediaItems") as string;
   const mediaItems = mediaJson ? JSON.parse(mediaJson) : [];
   const filesJson = formData.get("downloadableFiles") as string;
@@ -129,6 +139,9 @@ export async function updateAutomation(id: string, formData: FormData) {
         categoryId: categoryId || null,
         features,
         requirements,
+        integrations,
+        pricingType,
+        featured,
         seoTitle,
         seoDescription,
         ogImage,
@@ -165,6 +178,7 @@ export async function updateAutomation(id: string, formData: FormData) {
   revalidatePath("/admin/automations");
   revalidatePath(`/automations/${slug}`);
   revalidatePath("/automations");
+  revalidatePath("/my-automations");
   redirect("/admin/automations");
 }
 
