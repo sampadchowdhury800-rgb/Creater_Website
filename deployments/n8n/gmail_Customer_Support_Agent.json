@@ -1,0 +1,784 @@
+{
+  "id": "AESai9x1nAP41VKO",
+  "name": "gmail_Customer_Support_Agent",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "v1/inbound-event",
+        "options": {}
+      },
+      "id": "569f48bd-b0de-4eb2-b59f-8f4aed92e95a",
+      "name": "Webhook: Authorized Inbound Event",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        -1600,
+        208
+      ],
+      "webhookId": "8a607c1d-d09b-434f-b009-50e1e03a6e2c"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const payload = $json.body || $json;\n\nconst requiredFields = [\n  'eventId',\n  'eventType',\n  'tenantId',\n  'emailId',\n  'threadId',\n  'executionGrantId',\n  'timestamp'\n];\n\nfor (const field of requiredFields) {\n  if (typeof payload[field] !== 'string' || payload[field].trim() === '') {\n    throw new Error('Invalid context: Missing or empty field ' + field);\n  }\n}\n\nif (payload.eventType !== 'GMAIL_INBOUND_NOTIFICATION') {\n  throw new Error('Invalid context: Unsupported eventType ' + payload.eventType);\n}\n\nreturn {\n  json: {\n    eventId: payload.eventId.trim(),\n    eventType: payload.eventType.trim(),\n    tenantId: payload.tenantId.trim(),\n    emailId: payload.emailId.trim(),\n    threadId: payload.threadId.trim(),\n    executionGrantId: payload.executionGrantId.trim(),\n    timestamp: payload.timestamp.trim(),\n    contextValid: true\n  }\n};"
+      },
+      "id": "50695f2e-26d8-49a8-83fb-7a76e65bba11",
+      "name": "Code: Validate Context",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1296,
+        208
+      ],
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.CHOWDHURY_DUO_API_BASE_URL }}/api/internal/automation/grants/validate",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ tenantId: $('Code: Validate Context').item.json.tenantId, executionGrantId: $('Code: Validate Context').item.json.executionGrantId }) }}",
+        "options": {
+          "redirect": {
+            "redirect": {
+              "maxRedirects": 5
+            }
+          },
+          "timeout": 15000
+        }
+      },
+      "id": "61d51e13-2b75-4ff1-80d2-92837f78864f",
+      "name": "HTTP: Resolve Execution & Entitlements",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -1008,
+        208
+      ],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 2000
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "combinator": "and",
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.status }}",
+                    "operator": {
+                      "operation": "equals",
+                      "type": "string"
+                    },
+                    "rightValue": "VALID"
+                  },
+                  {
+                    "leftValue": "={{ $json.isEntitled }}",
+                    "operator": {
+                      "operation": "equals",
+                      "type": "boolean"
+                    },
+                    "rightValue": true
+                  }
+                ],
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 1
+                }
+              },
+              "renameOutput": true,
+              "outputKey": "Valid & Entitled"
+            }
+          ]
+        },
+        "options": {
+          "fallbackOutput": "extra",
+          "renameFallbackOutput": "Entitlement Stopped"
+        }
+      },
+      "id": "f2f0936e-332a-4e1a-ba5c-4179fb0af856",
+      "name": "Switch: Grant & Entitlement Guard",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [
+        -704,
+        208
+      ]
+    },
+    {
+      "parameters": {},
+      "id": "ccfd8db6-d9fd-4479-ac22-473653635e05",
+      "name": "NoOp: Entitlement Stopped",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        -400,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.CHOWDHURY_DUO_API_BASE_URL }}/api/internal/gateway/gmail/fetch-and-lock",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ tenantId: $('Code: Validate Context').item.json.tenantId, executionGrantId: $('Code: Validate Context').item.json.executionGrantId, emailId: $('Code: Validate Context').item.json.emailId, threadId: $('Code: Validate Context').item.json.threadId }) }}",
+        "options": {
+          "redirect": {
+            "redirect": {
+              "maxRedirects": 5
+            }
+          },
+          "timeout": 20000
+        }
+      },
+      "id": "8c809b4e-e377-49f1-88d5-1b480a530c07",
+      "name": "HTTP: Ingest & Deduplicate Email",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -400,
+        208
+      ],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 2000
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "combinator": "and",
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.isDuplicate }}",
+                    "operator": {
+                      "operation": "equals",
+                      "type": "boolean"
+                    },
+                    "rightValue": false
+                  },
+                  {
+                    "leftValue": "={{ $json.processingStatus }}",
+                    "operator": {
+                      "operation": "equals",
+                      "type": "string"
+                    },
+                    "rightValue": "ACQUIRED_LOCK"
+                  }
+                ],
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 1
+                }
+              },
+              "renameOutput": true,
+              "outputKey": "New & Locked"
+            }
+          ]
+        },
+        "options": {
+          "fallbackOutput": "extra",
+          "renameFallbackOutput": "Duplicate"
+        }
+      },
+      "id": "a92a1c97-e775-48f9-83a3-dd5bfe5ccaa4",
+      "name": "Switch: Idempotency Guard",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [
+        -96,
+        208
+      ]
+    },
+    {
+      "parameters": {},
+      "id": "024fffd2-1c55-458d-a8ea-fec43eaf2315",
+      "name": "NoOp: Duplicate",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        208,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.CHOWDHURY_DUO_API_BASE_URL }}/api/internal/automation/process-email",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ tenantId: $('Code: Validate Context').item.json.tenantId, executionGrantId: $('Code: Validate Context').item.json.executionGrantId, emailId: $('Code: Validate Context').item.json.emailId, customer: { email: $('HTTP: Ingest & Deduplicate Email').item.json.email.from }, content: { subject: $('HTTP: Ingest & Deduplicate Email').item.json.email.subject, body: $('HTTP: Ingest & Deduplicate Email').item.json.email.normalizedBody, threadHistory: $('HTTP: Ingest & Deduplicate Email').item.json.email.threadHistorySnippet } }) }}",
+        "options": {
+          "redirect": {
+            "redirect": {
+              "maxRedirects": 5
+            }
+          },
+          "timeout": 60000
+        }
+      },
+      "id": "2d4f5f78-7825-4bac-9faf-e6be79df3f67",
+      "name": "HTTP: Process AI Inference & Policy",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        208,
+        208
+      ],
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "combinator": "and",
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.action }}",
+                    "operator": {
+                      "operation": "equals",
+                      "type": "string"
+                    },
+                    "rightValue": "AUTO_REPLY"
+                  }
+                ],
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 1
+                }
+              },
+              "renameOutput": true,
+              "outputKey": "AUTO_REPLY"
+            },
+            {
+              "conditions": {
+                "combinator": "and",
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.action }}",
+                    "operator": {
+                      "operation": "equals",
+                      "type": "string"
+                    },
+                    "rightValue": "HUMAN_REVIEW"
+                  }
+                ],
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 1
+                }
+              },
+              "renameOutput": true,
+              "outputKey": "HUMAN_REVIEW"
+            },
+            {
+              "conditions": {
+                "combinator": "and",
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.action }}",
+                    "operator": {
+                      "operation": "equals",
+                      "type": "string"
+                    },
+                    "rightValue": "IGNORE"
+                  }
+                ],
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 1
+                }
+              },
+              "renameOutput": true,
+              "outputKey": "IGNORE"
+            },
+            {
+              "conditions": {
+                "combinator": "and",
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.action }}",
+                    "operator": {
+                      "operation": "equals",
+                      "type": "string"
+                    },
+                    "rightValue": "FAILED"
+                  }
+                ],
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 1
+                }
+              },
+              "renameOutput": true,
+              "outputKey": "FAILED"
+            }
+          ]
+        },
+        "options": {
+          "fallbackOutput": "extra",
+          "renameFallbackOutput": "Unknown Action"
+        }
+      },
+      "id": "ea782728-e103-4596-8315-ee9affb74d2e",
+      "name": "Switch: Route Backend Action",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [
+        512,
+        208
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.CHOWDHURY_DUO_API_BASE_URL }}/api/internal/gateway/gmail/send-reply",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ tenantId: $('Code: Validate Context').item.json.tenantId, executionGrantId: $('Code: Validate Context').item.json.executionGrantId, emailId: $('Code: Validate Context').item.json.emailId, threadId: $('Code: Validate Context').item.json.threadId, reply: { body: $('HTTP: Process AI Inference & Policy').item.json.replyPayload.body, format: $('HTTP: Process AI Inference & Policy').item.json.replyPayload.format || 'text/plain' }, idempotencyKey: 'idem_reply_' + $('Code: Validate Context').item.json.emailId }) }}",
+        "options": {
+          "redirect": {
+            "redirect": {
+              "maxRedirects": 5
+            }
+          },
+          "timeout": 30000
+        }
+      },
+      "id": "0243620d-0343-4242-a84c-6f7051c02821",
+      "name": "HTTP: Send Reply via Gmail Gateway",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        800,
+        0
+      ],
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.CHOWDHURY_DUO_API_BASE_URL }}/api/internal/automation/record-outcome",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ tenantId: $('Code: Validate Context').item.json.tenantId, emailId: $('Code: Validate Context').item.json.emailId, threadId: $('Code: Validate Context').item.json.threadId, status: 'SUCCESS', action: 'AUTO_REPLY', sentMessageId: $json.sentMessageId, timestamp: new Date().toISOString() }) }}",
+        "options": {
+          "redirect": {
+            "redirect": {
+              "maxRedirects": 5
+            }
+          },
+          "timeout": 15000
+        }
+      },
+      "id": "bff6cf98-89a5-4201-9402-640c4275639c",
+      "name": "HTTP: Finalize Execution Success",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1104,
+        0
+      ]
+    },
+    {
+      "parameters": {},
+      "id": "9d3889cd-bc5f-461d-a8a6-29bcf21da26f",
+      "name": "NoOp: Completed",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        1408,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.CHOWDHURY_DUO_API_BASE_URL }}/api/internal/automation/queue-review",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ tenantId: $('Code: Validate Context').item.json.tenantId, emailId: $('Code: Validate Context').item.json.emailId, threadId: $('Code: Validate Context').item.json.threadId, action: 'HUMAN_REVIEW', draft: { body: $('HTTP: Process AI Inference & Policy').item.json.replyPayload ? $('HTTP: Process AI Inference & Policy').item.json.replyPayload.body : '', subject: $('HTTP: Ingest & Deduplicate Email').item.json.email ? $('HTTP: Ingest & Deduplicate Email').item.json.email.subject : '' }, reason: $('HTTP: Process AI Inference & Policy').item.json.reviewReason || 'Low confidence or policy flag' }) }}",
+        "options": {
+          "redirect": {
+            "redirect": {
+              "maxRedirects": 5
+            }
+          },
+          "timeout": 15000
+        }
+      },
+      "id": "1e218397-25c7-4464-abde-9607dc286e0a",
+      "name": "HTTP: Mark Human Review",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        800,
+        208
+      ]
+    },
+    {
+      "parameters": {},
+      "id": "57a11fe1-451e-48ca-81a6-e4347648493b",
+      "name": "NoOp: Review Queued",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        1104,
+        208
+      ]
+    },
+    {
+      "parameters": {},
+      "id": "180fdf35-9dc0-45b2-aa19-30db6ba456ce",
+      "name": "NoOp: Ignored",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        800,
+        352
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.CHOWDHURY_DUO_API_BASE_URL }}/api/internal/automation/record-outcome",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ tenantId: $('Code: Validate Context').item.json ? $('Code: Validate Context').item.json.tenantId : null, emailId: $('Code: Validate Context').item.json ? $('Code: Validate Context').item.json.emailId : null, threadId: $('Code: Validate Context').item.json ? $('Code: Validate Context').item.json.threadId : null, status: 'FAILED', action: $json.action || 'FAILED', error: $json.error || $json.message || 'Execution error or unrecognized action', timestamp: new Date().toISOString() }) }}",
+        "options": {
+          "redirect": {
+            "redirect": {
+              "maxRedirects": 5
+            }
+          },
+          "timeout": 15000
+        }
+      },
+      "id": "6c748970-5a26-47a3-89c2-14fff0007d5d",
+      "name": "HTTP: Record Failure",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        800,
+        512
+      ]
+    },
+    {
+      "parameters": {},
+      "id": "d8075db1-7d31-468d-af16-7be118b203aa",
+      "name": "NoOp: Failed",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        1104,
+        512
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## Ingestion & Verification\nReceives authorized webhook events, validates payload context, confirms tenant entitlements, and checks idempotency lock before ingestion.",
+        "height": 400,
+        "width": 1400,
+        "color": 7
+      },
+      "id": "ef1d1715-e269-424f-98d2-8eeeb57a76cd",
+      "name": "Sticky Note: Ingestion & Verification",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -1648,
+        112
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## Backend RAG & Policy Decision\nCalls Chowdhury Duo backend for pgvector knowledge retrieval, OpenRouter inference, and security policy checks. Routes based on deterministic backend action.",
+        "height": 480,
+        "width": 550,
+        "color": 4
+      },
+      "id": "babca606-7f1c-4c8f-8590-6ea20eb6adb9",
+      "name": "Sticky Note: Backend RAG & Policy Decision",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        128,
+        80
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## Authorized Gateway Execution\nSends automated reply exclusively via Chowdhury Duo Gmail Gateway using transient execution grant and records final execution outcome.",
+        "height": 250,
+        "width": 700,
+        "color": 6
+      },
+      "id": "fca7ea0f-a030-4111-87f5-7b4014421cdc",
+      "name": "Sticky Note: Authorized Gateway Execution",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        752,
+        -48
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## Terminal Sinks & Error Reporting\nHandles human review queuing, silent ignore terminations, entitlement stops, deduplication exits, and audit error reporting.",
+        "height": 500,
+        "width": 700,
+        "color": 2
+      },
+      "id": "2f867a16-a48f-4980-86dc-22d7783259d6",
+      "name": "Sticky Note: Terminal Sinks & Error Reporting",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        752,
+        176
+      ]
+    }
+  ],
+  "connections": {
+    "Webhook: Authorized Inbound Event": {
+      "main": [
+        [
+          {
+            "node": "Code: Validate Context",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code: Validate Context": {
+      "main": [
+        [
+          {
+            "node": "HTTP: Resolve Execution & Entitlements",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "HTTP: Record Failure",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP: Resolve Execution & Entitlements": {
+      "main": [
+        [
+          {
+            "node": "Switch: Grant & Entitlement Guard",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch: Grant & Entitlement Guard": {
+      "main": [
+        [
+          {
+            "node": "HTTP: Ingest & Deduplicate Email",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "NoOp: Entitlement Stopped",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP: Ingest & Deduplicate Email": {
+      "main": [
+        [
+          {
+            "node": "Switch: Idempotency Guard",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch: Idempotency Guard": {
+      "main": [
+        [
+          {
+            "node": "HTTP: Process AI Inference & Policy",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "NoOp: Duplicate",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP: Process AI Inference & Policy": {
+      "main": [
+        [
+          {
+            "node": "Switch: Route Backend Action",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "HTTP: Record Failure",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch: Route Backend Action": {
+      "main": [
+        [
+          {
+            "node": "HTTP: Send Reply via Gmail Gateway",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "HTTP: Mark Human Review",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "NoOp: Ignored",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "HTTP: Record Failure",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "HTTP: Record Failure",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP: Send Reply via Gmail Gateway": {
+      "main": [
+        [
+          {
+            "node": "HTTP: Finalize Execution Success",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "HTTP: Record Failure",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP: Finalize Execution Success": {
+      "main": [
+        [
+          {
+            "node": "NoOp: Completed",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP: Mark Human Review": {
+      "main": [
+        [
+          {
+            "node": "NoOp: Review Queued",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP: Record Failure": {
+      "main": [
+        [
+          {
+            "node": "NoOp: Failed",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": true
+  },
+  "meta": {
+    "aiBuilderAssisted": true,
+    "builderVariant": "mcp"
+  }
+}
