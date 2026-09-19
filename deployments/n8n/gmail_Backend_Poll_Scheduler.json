@@ -1,0 +1,68 @@
+{
+  "id": "eFgsgtIqInoZDMJy",
+  "name": "gmail_Backend_Poll_Scheduler",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "minutesInterval": 2
+            }
+          ]
+        }
+      },
+      "id": "cff69018-cc35-4775-84f0-0a39d53d6b18",
+      "name": "Schedule: Poll Gmail Every 2 Minutes",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://chowdhuryduo.in/api/internal/gateway/gmail/poll",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": false,
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "id": "d2668159-d73e-46a8-bb98-93204a0db6a4",
+      "name": "HTTP: Call Gmail Polling Gateway",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        224,
+        0
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "fWVUiIteHrABav0m",
+          "name": "Chowdhury Duo Backend Service"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Schedule: Poll Gmail Every 2 Minutes": {
+      "main": [
+        [
+          {
+            "node": "HTTP: Call Gmail Polling Gateway",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

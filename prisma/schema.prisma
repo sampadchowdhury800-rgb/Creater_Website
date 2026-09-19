@@ -1,0 +1,1180 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Admin {
+  id           String         @id @default(cuid())
+  email        String         @unique
+  passwordHash String
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+  sessions     AdminSession[]
+}
+
+model AdminSession {
+  id        String   @id @default(cuid())
+  token     String   @unique
+  adminId   String
+  ipAddress String?
+  userAgent String?
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  admin Admin @relation(fields: [adminId], references: [id], onDelete: Cascade)
+}
+
+model RateLimit {
+  id           String    @id @default(cuid())
+  ip           String    @unique
+  attempts     Int       @default(0)
+  lockoutUntil DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  action    String   // e.g. LOGIN_SUCCESS, LOGIN_FAILED, LOGOUT
+  ipAddress String?
+  userAgent String?
+  details   String?  // Optional extra info like email attempted
+  createdAt DateTime @default(now())
+}
+
+model Post {
+  id             String   @id @default(cuid())
+  title          String
+  slug           String   @unique
+  shortDesc      String?
+  content        String?  @db.Text
+  featuredImage  String?
+  galleryUrls    String[]
+  videoUrl       String?
+  instagramUrl   String?
+  youtubeUrl     String?
+  platform       Platform
+  publishDate    DateTime @default(now())
+  
+  // Basic SEO
+  seoTitle       String?
+  seoDescription String?
+  canonicalUrl   String?
+  keywords       String?
+  
+  // Open Graph
+  ogImage        String?
+  ogTitle        String?
+  ogDescription  String?
+  
+  // Twitter
+  twitterImage       String?
+  twitterTitle       String?
+  twitterDescription String?
+  
+  // Advanced SEO & UX
+  noindex        Boolean  @default(false)
+  nofollow       Boolean  @default(false)
+  readingTime    Int?     // in minutes
+
+  // AEO & Future-Proof Search Fields
+  directAnswer   String?  @db.Text
+  searchIntent   String?
+  primaryTopic   String?
+  faqs           Json?    // Array of { question: string, answer: string, sortOrder?: number }
+  
+  status         Status   @default(DRAFT)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  tags       Tag[]      @relation("PostTags")
+  categories Category[] @relation("PostCategories")
+  comments   Comment[]
+}
+
+model Category {
+  id          String     @id @default(cuid())
+  name        String     @unique
+  slug        String     @unique
+  description String?
+  
+  parentId    String?
+  parent      Category?  @relation("CategoryHierarchy", fields: [parentId], references: [id])
+  children    Category[] @relation("CategoryHierarchy")
+
+  posts       Post[]     @relation("PostCategories")
+  
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+}
+
+model Tag {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  slug      String   @unique
+  createdAt DateTime @default(now())
+  posts     Post[]   @relation("PostTags")
+}
+
+model Comment {
+  id          String        @id @default(cuid())
+  content     String        @db.Text
+  authorName  String
+  authorEmail String?
+  status      CommentStatus @default(PENDING)
+  
+  postId      String
+  post        Post          @relation(fields: [postId], references: [id], onDelete: Cascade)
+  
+  parentId    String?
+  parent      Comment?      @relation("CommentReplies", fields: [parentId], references: [id])
+  replies     Comment[]     @relation("CommentReplies")
+  
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+}
+
+model Media {
+  id        String   @id @default(cuid())
+  url       String
+  publicId  String   @unique
+  format    String?
+  width     Int?
+  height    Int?
+  bytes     Int?
+  folder    String?  @default("general")
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Setting {
+  key       String   @id
+  value     String   @db.Text
+  updatedAt DateTime @updatedAt
+}
+
+model PageVisit {
+  id        String   @id @default(cuid())
+  path      String
+  ipHash    String?  // Anonymized IP hash
+  userAgent String?
+  referer   String?
+  timestamp DateTime @default(now())
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SERVICES & SOLUTIONS
+// ─────────────────────────────────────────────────────────────────────────────
+
+model Service {
+  id           String   @id @default(cuid())
+  name         String
+  slug         String   @unique
+  shortDesc    String?  @db.Text
+  fullDesc     String?  @db.Text
+  category     String?
+  features     String[]
+  technologies String[]
+  useCases     String[]
+  icon         String?
+  coverImage   String?
+  sortOrder    Int      @default(0)
+  status       Status   @default(PUBLISHED)
+
+  // AEO & SEO Fields
+  directAnswer   String? @db.Text
+  seoTitle       String?
+  seoDescription String?
+  ogImage        String?
+  faqs           Json?   // Array of { question: string, answer: string, sortOrder?: number }
+
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// PROJECTS & PORTFOLIO (Case Studies, distinct from Automations for sale)
+// ─────────────────────────────────────────────────────────────────────────────
+
+model Project {
+  id           String   @id @default(cuid())
+  title        String
+  slug         String   @unique
+  shortDesc    String?  @db.Text
+  fullDesc     String?  @db.Text
+  client       String?
+  role         String?
+  technologies String[]
+  problem      String?  @db.Text
+  solution     String?  @db.Text
+  result       String?  @db.Text
+  images       String[]
+  videoUrl     String?
+  demoUrl      String?
+  githubUrl    String?
+  sortOrder    Int      @default(0)
+  status       Status   @default(PUBLISHED)
+
+  // AEO & SEO Fields
+  directAnswer   String? @db.Text
+  seoTitle       String?
+  seoDescription String?
+  ogImage        String?
+  faqs           Json?   // Array of { question: string, answer: string, sortOrder?: number }
+
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// PEOPLE / FOUNDERS / PERSONAL BRAND ENTITY
+// ─────────────────────────────────────────────────────────────────────────────
+
+model Person {
+  id           String   @id @default(cuid())
+  name         String
+  slug         String   @unique
+  title        String
+  shortBio     String?  @db.Text
+  bio          String?  @db.Text
+  avatarUrl    String?
+  email        String?
+  location     String?
+  linkedin     String?
+  github       String?
+  youtube      String?
+  instagram    String?
+  website      String?
+  education    Json?    // Array of { degree: string, institution: string, year?: string, details?: string }
+  experience   Json?    // Array of { role: string, company: string, period?: string, description?: string, highlights?: string[] }
+  skills       String[]
+  achievements String[]
+  isFounder    Boolean  @default(true)
+  sortOrder    Int      @default(0)
+
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SOCIAL PROFILES / OFFICIAL ENTITY LINKS
+// ─────────────────────────────────────────────────────────────────────────────
+
+model SocialProfile {
+  id         String   @id @default(cuid())
+  platform   String
+  label      String
+  url        String
+  icon       String?
+  color      String?
+  isOfficial Boolean  @default(true)
+  sortOrder  Int      @default(0)
+
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// AUTOMATIONS MARKETPLACE
+// ─────────────────────────────────────────────────────────────────────────────
+
+/// An automation product for sale in the marketplace.
+/// All monetary amounts stored in the smallest currency unit (paise for INR).
+model Automation {
+  id              String              @id @default(cuid())
+  slug            String              @unique
+  title           String
+  shortDesc       String?
+  description     String?             @db.Text
+  features        String[]
+  requirements    String[]
+  integrations    String[]            @default([])
+
+  // Pricing — stored in paise (1 INR = 100 paise) to avoid float arithmetic
+  price           Int                 // current selling price in paise
+  originalPrice   Int?                // original / crossed-out price in paise
+  discountPercent Int?                // convenience field (not used for calculation)
+  currency        String              @default("INR")
+  pricingType     PricingType         @default(ONE_TIME)
+  featured        Boolean             @default(false)
+
+  categoryId      String?
+  category        AutomationCategory? @relation(fields: [categoryId], references: [id])
+
+  thumbnailUrl    String?             // primary thumbnail for cards
+  status          AutomationStatus    @default(DRAFT)
+
+  // Denormalized counters for fast sort — updated on review create/delete
+  ratingSum       Int                 @default(0)
+  reviewCount     Int                 @default(0)
+
+  // SEO & AEO Future-Proof Fields
+  seoTitle        String?
+  seoDescription  String?
+  ogImage         String?
+  directAnswer    String?             @db.Text
+  primaryTopic    String?
+  searchIntent    String?
+  faqs            Json?
+
+  // Execution & n8n workflow binding (server-side reference)
+  n8nWorkflowId   String?
+  isExecutable    Boolean             @default(true)
+  executionMode   AutomationExecutionMode @default(MANUAL)
+  configSchema    Json?
+  integrationRequirements Json?
+
+  createdAt       DateTime            @default(now())
+  updatedAt       DateTime            @updatedAt
+
+  media           AutomationMedia[]
+  files           AutomationFile[]
+  reviews         AutomationReview[]
+  comments        AutomationComment[]
+  cartItems       CartItem[]
+  wishlistItems   WishlistItem[]
+  orderItems      OrderItem[]
+  userAutomations UserAutomation[]
+  plans           AutomationPlan[]
+  entitlements    AutomationEntitlement[]
+  trialTrackers   AutomationTrialTracker[]
+  subscriptions   UserSubscription[]
+}
+
+/// Images and videos attached to an automation product.
+model AutomationMedia {
+  id           String     @id @default(cuid())
+  automationId String
+  automation   Automation @relation(fields: [automationId], references: [id], onDelete: Cascade)
+
+  url          String
+  publicId     String    @unique
+  type         MediaType @default(IMAGE)
+  format       String?
+  sortOrder    Int       @default(0)
+  isPrimary    Boolean   @default(false)
+
+  createdAt    DateTime  @default(now())
+}
+
+/// Downloadable resources / product files attached to an automation product.
+model AutomationFile {
+  id           String     @id @default(cuid())
+  automationId String
+  automation   Automation @relation(fields: [automationId], references: [id], onDelete: Cascade)
+
+  title        String     // Display title, e.g. "Lead Generation Workflow JSON"
+  fileName     String     // Original file name with extension, e.g. "lead-gen-v1.zip"
+  fileUrl      String     // Storage delivery URL
+  publicId     String     // Cloudinary publicId / storage identifier
+  fileSize     Int?       // in bytes
+  fileType     String?    // MIME type or file extension
+  sortOrder    Int        @default(0)
+
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  @@index([automationId])
+}
+
+/// Taxonomy categories for filtering automations.
+model AutomationCategory {
+  id          String       @id @default(cuid())
+  name        String       @unique
+  slug        String       @unique
+  description String?
+
+  automations Automation[]
+
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// CART  (Clerk userId as external key — no Clerk tables stored in DB)
+// ─────────────────────────────────────────────────────────────────────────────
+
+model Cart {
+  id          String     @id @default(cuid())
+  clerkUserId String     @unique  // Clerk user_id
+  items       CartItem[]
+
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+}
+
+model CartItem {
+  id           String          @id @default(cuid())
+  cartId       String
+  cart         Cart            @relation(fields: [cartId], references: [id], onDelete: Cascade)
+
+  automationId String
+  automation   Automation      @relation(fields: [automationId], references: [id], onDelete: Cascade)
+
+  planId       String?
+  plan         AutomationPlan? @relation(fields: [planId], references: [id], onDelete: SetNull)
+
+  quantity     Int             @default(1)
+
+  createdAt    DateTime        @default(now())
+  updatedAt    DateTime        @updatedAt
+
+  @@unique([cartId, automationId])
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// WISHLIST
+// ─────────────────────────────────────────────────────────────────────────────
+
+model Wishlist {
+  id          String         @id @default(cuid())
+  clerkUserId String         @unique
+  items       WishlistItem[]
+
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+}
+
+model WishlistItem {
+  id           String     @id @default(cuid())
+  wishlistId   String
+  wishlist     Wishlist   @relation(fields: [wishlistId], references: [id], onDelete: Cascade)
+
+  automationId String
+  automation   Automation @relation(fields: [automationId], references: [id], onDelete: Cascade)
+
+  createdAt    DateTime   @default(now())
+
+  @@unique([wishlistId, automationId])
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// ORDERS & PAYMENTS
+// ─────────────────────────────────────────────────────────────────────────────
+
+model Order {
+  id                String                  @id @default(cuid())
+  clerkUserId       String
+
+  totalAmount       Int                     // in paise
+  currency          String                  @default("INR")
+
+  status            OrderStatus             @default(PENDING)
+  paymentStatus     PaymentStatus           @default(PENDING)
+
+  // Razorpay data — all server-set, never from browser
+  razorpayOrderId   String?                 @unique
+  razorpayPaymentId String?                 @unique
+  razorpaySignature String?
+
+  items             OrderItem[]
+  entitlements      AutomationEntitlement[]
+
+  createdAt         DateTime                @default(now())
+  updatedAt         DateTime                @updatedAt
+
+  @@index([clerkUserId])
+}
+
+/// Snapshot of purchased product — preserves price/title even if product changes.
+model OrderItem {
+  id                          String          @id @default(cuid())
+  orderId                     String
+  order                       Order           @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  automationId                String
+  automation                  Automation      @relation(fields: [automationId], references: [id])
+
+  planId                      String?
+  plan                        AutomationPlan? @relation(fields: [planId], references: [id], onDelete: SetNull)
+
+  // Snapshots at time of purchase
+  titleSnapshot               String
+  priceSnapshot               Int             // in paise
+  quantity                    Int             @default(1)
+
+  planNameSnapshot            String?
+  planCodeSnapshot            String?
+  durationDaysSnapshot        Int?
+  isLifetimeSnapshot          Boolean         @default(false)
+  maintenancePriceSnapshot    Int?
+  maintenanceIntervalSnapshot String?
+
+  createdAt                   DateTime        @default(now())
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// REVIEWS (one per user per product, enforced by unique constraint)
+// ─────────────────────────────────────────────────────────────────────────────
+
+model AutomationReview {
+  id             String     @id @default(cuid())
+  clerkUserId    String
+  clerkUserName  String?    // cached display name
+  clerkUserImage String?    // cached avatar URL
+
+  automationId   String
+  automation     Automation @relation(fields: [automationId], references: [id], onDelete: Cascade)
+
+  rating         Int        // 1–5
+  body           String?    @db.Text
+
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
+
+  @@unique([clerkUserId, automationId])
+  @@index([automationId])
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// COMMENTS on automation products
+// ─────────────────────────────────────────────────────────────────────────────
+
+model AutomationComment {
+  id             String              @id @default(cuid())
+  clerkUserId    String
+  clerkUserName  String?
+  clerkUserImage String?
+
+  automationId   String
+  automation     Automation          @relation(fields: [automationId], references: [id], onDelete: Cascade)
+
+  content        String              @db.Text
+
+  parentId       String?
+  parent         AutomationComment?  @relation("AutomationCommentReplies", fields: [parentId], references: [id])
+  replies        AutomationComment[] @relation("AutomationCommentReplies")
+
+  createdAt      DateTime            @default(now())
+  updatedAt      DateTime            @updatedAt
+
+  @@index([automationId])
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// ENUMS
+// ─────────────────────────────────────────────────────────────────────────────
+
+enum Platform {
+  INSTAGRAM
+  YOUTUBE
+}
+
+enum Status {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
+enum CommentStatus {
+  PENDING
+  APPROVED
+  SPAM
+  REJECTED
+}
+
+enum AutomationStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
+enum AutomationExecutionMode {
+  MANUAL
+  EVENT_DRIVEN
+}
+
+enum MediaType {
+  IMAGE
+  VIDEO
+}
+
+enum OrderStatus {
+  PENDING
+  CONFIRMED
+  CANCELLED
+  REFUNDED
+}
+
+enum PaymentStatus {
+  PENDING
+  PAID
+  FAILED
+  REFUNDED
+}
+
+
+
+// ─────────────────────────────────────────────────────────────────────────────
+// USER AUTOMATION RELATIONSHIP & WORKSPACE FOUNDATION
+// ─────────────────────────────────────────────────────────────────────────────
+
+model UserAutomation {
+  id           String               @id @default(cuid())
+  clerkUserId  String
+  automationId String
+  automation   Automation           @relation(fields: [automationId], references: [id], onDelete: Cascade)
+  status       UserAutomationStatus @default(NOT_CONFIGURED)
+  config       Json?
+  createdAt    DateTime             @default(now())
+  updatedAt    DateTime             @updatedAt
+
+  executions   AutomationExecution[]
+  secrets      UserAutomationSecret[]
+  entitlements AutomationEntitlement[]
+  integrations UserAutomationIntegration[]
+  executionGrants AutomationExecutionGrant[]
+  supportConversations SupportConversation[]
+
+  @@unique([clerkUserId, automationId])
+  @@index([clerkUserId])
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SECURE CREDENTIAL VAULT
+// Phase 7: Encrypted storage for sensitive automation secrets.
+//
+// ARCHITECTURE:
+//   - Each record stores ONE encrypted secret for ONE UserAutomation field.
+//   - The plaintext value is NEVER stored in this table.
+//   - encryptedValue is the base64-encoded AES-256-GCM ciphertext.
+//   - iv (initialization vector) is unique per encryption operation (12 bytes, base64).
+//   - authTag is the GCM authentication tag (16 bytes, base64).
+//   - version indicates the encryption scheme (current: 1 = AES-256-GCM).
+//   - metadata may hold non-sensitive info (e.g., key name, last updated hint).
+//     It MUST NOT contain the secret value or encryption key.
+//   - Cascade delete: when a UserAutomation is deleted, all its secrets are deleted.
+//
+// KEY MANAGEMENT:
+//   The encryption key lives ONLY in the AUTOMATION_VAULT_KEY environment variable.
+//   It is never stored in the database or source code.
+//
+// IDOR PROTECTION:
+//   Access must always be verified through the UserAutomation ownership chain:
+//   Clerk userId → UserAutomation.clerkUserId → UserAutomationSecret.userAutomationId
+// ─────────────────────────────────────────────────────────────────────────────
+model UserAutomationSecret {
+  id               String         @id @default(cuid())
+  userAutomationId String
+  userAutomation   UserAutomation @relation(fields: [userAutomationId], references: [id], onDelete: Cascade)
+
+  /// The ConfigSchemaField.key this secret belongs to (e.g. "apiKey", "accessToken")
+  key              String
+
+  /// AES-256-GCM ciphertext, base64-encoded. Never contains plaintext.
+  encryptedValue   String         @db.Text
+
+  /// 12-byte initialization vector, base64-encoded. Unique per encryption.
+  iv               String
+
+  /// 16-byte GCM authentication tag, base64-encoded. Validates integrity.
+  authTag          String
+
+  /// Encryption scheme version. Current: 1 = AES-256-GCM.
+  version          Int            @default(1)
+
+  /// Optional non-sensitive metadata (e.g. { "hint": "configured" }).
+  /// MUST NOT contain plaintext secret values.
+  metadata         Json?
+
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+
+  /// One encrypted secret per field per workspace
+  @@unique([userAutomationId, key])
+  @@index([userAutomationId])
+}
+
+model AutomationExecution {
+  id                  String           @id @default(cuid())
+  userAutomationId    String
+  userAutomation      UserAutomation   @relation(fields: [userAutomationId], references: [id], onDelete: Cascade)
+  clerkUserId         String
+  status              ExecutionStatus  @default(QUEUED)
+  startedAt           DateTime?
+  completedAt         DateTime?
+  externalExecutionId String?
+  input               Json?
+  output              Json?
+  error               String?
+  createdAt           DateTime         @default(now())
+  updatedAt           DateTime         @updatedAt
+
+  executionGrants     AutomationExecutionGrant[]
+  gatewayOperations   AutomationGatewayOperation[]
+
+  @@index([userAutomationId])
+  @@index([clerkUserId])
+}
+
+enum ExecutionStatus {
+  QUEUED
+  RUNNING
+  COMPLETED
+  FAILED
+  CANCELLED
+}
+
+enum UserAutomationStatus {
+  NOT_CONFIGURED
+  ACTIVE
+  PAUSED
+  PENDING
+  DISABLED
+}
+
+enum PricingType {
+  ONE_TIME
+  SUBSCRIPTION
+  FREE
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// DYNAMIC PRICING, ENTITLEMENTS & SUBSCRIPTION ENGINE
+// ─────────────────────────────────────────────────────────────────────────────
+
+enum PlanType {
+  TRIAL
+  TIME_LIMITED
+  LIFETIME
+}
+
+enum MaintenanceInterval {
+  NONE
+  MONTHLY
+  YEARLY
+}
+
+enum MaintenanceStartRule {
+  IMMEDIATELY
+  AFTER_ACCESS_EXPIRY
+}
+
+enum EntitlementStatus {
+  ACTIVE
+  TRIAL
+  EXPIRED
+  GRACE_PERIOD
+  SUSPENDED
+  REVOKED
+  SUPERSEDED
+}
+
+enum MaintenanceStatus {
+  NOT_APPLICABLE
+  ACTIVE
+  PAST_DUE
+  GRACE_PERIOD
+  CANCELLED
+  SUSPENDED
+}
+
+enum SubscriptionStatus {
+  PENDING
+  ACTIVE
+  PAST_DUE
+  CANCELLED
+  HALTED
+  COMPLETED
+}
+
+model AutomationPlan {
+  id                   String                @id @default(cuid())
+  automationId         String
+  automation           Automation            @relation(fields: [automationId], references: [id], onDelete: Cascade)
+
+  name                 String
+  code                 String
+  description          String?               @db.Text
+  planType             PlanType              @default(TIME_LIMITED)
+
+  price                Int                   // in paise (0 for free trial)
+  originalPrice        Int?                  // in paise
+  currency             String                @default("INR")
+
+  durationDays         Int?                  // null for LIFETIME
+  trialDays            Int?                  // populated if planType == TRIAL
+
+  maintenanceEnabled   Boolean               @default(false)
+  maintenancePrice     Int                   @default(0) // in paise
+  maintenanceInterval  MaintenanceInterval   @default(NONE)
+  maintenanceStartRule MaintenanceStartRule  @default(AFTER_ACCESS_EXPIRY)
+  razorpayPlanId       String?
+
+  isPopular            Boolean               @default(false)
+  isActive             Boolean               @default(true)
+  sortOrder            Int                   @default(0)
+
+  createdAt            DateTime              @default(now())
+  updatedAt            DateTime              @updatedAt
+
+  orderItems           OrderItem[]
+  cartItems            CartItem[]
+  entitlements         AutomationEntitlement[]
+  trialTrackers        AutomationTrialTracker[]
+  subscriptions        UserSubscription[]
+
+  @@unique([automationId, code])
+  @@index([automationId, isActive])
+}
+
+model AutomationEntitlement {
+  id                        String             @id @default(cuid())
+  clerkUserId               String
+  automationId              String
+  automation                Automation         @relation(fields: [automationId], references: [id], onDelete: Cascade)
+
+  planId                    String?
+  plan                      AutomationPlan?    @relation(fields: [planId], references: [id], onDelete: SetNull)
+
+  orderId                   String?
+  order                     Order?             @relation(fields: [orderId], references: [id], onDelete: SetNull)
+
+  userAutomationId          String?
+  userAutomation            UserAutomation?    @relation(fields: [userAutomationId], references: [id], onDelete: SetNull)
+
+  status                    EntitlementStatus  @default(ACTIVE)
+  isLifetime                Boolean            @default(false)
+
+  startsAt                  DateTime           @default(now())
+  expiresAt                 DateTime?          // null if isLifetime
+  gracePeriodEndsAt         DateTime?
+
+  maintenanceStatus         MaintenanceStatus  @default(NOT_APPLICABLE)
+  maintenanceSubscriptionId String?
+  subscription              UserSubscription?  @relation(fields: [maintenanceSubscriptionId], references: [id], onDelete: SetNull)
+
+  notes                     String?
+  createdAt                 DateTime           @default(now())
+  updatedAt                 DateTime           @updatedAt
+
+  @@index([clerkUserId, automationId])
+  @@index([status])
+  @@index([expiresAt])
+}
+
+model AutomationTrialTracker {
+  id           String          @id @default(cuid())
+  clerkUserId  String
+  automationId String
+  automation   Automation      @relation(fields: [automationId], references: [id], onDelete: Cascade)
+  planId       String?
+  plan         AutomationPlan? @relation(fields: [planId], references: [id], onDelete: SetNull)
+  claimedAt    DateTime        @default(now())
+
+  @@unique([clerkUserId, automationId])
+  @@index([clerkUserId])
+}
+
+model UserSubscription {
+  id                     String              @id @default(cuid())
+  clerkUserId            String
+  automationId           String
+  automation             Automation          @relation(fields: [automationId], references: [id], onDelete: Cascade)
+  planId                 String
+  plan                   AutomationPlan      @relation(fields: [planId], references: [id], onDelete: Cascade)
+
+  razorpaySubscriptionId String              @unique
+  razorpayPlanId         String
+  status                 SubscriptionStatus  @default(PENDING)
+
+  currentPeriodStart     DateTime?
+  currentPeriodEnd       DateTime?
+  chargeAmount           Int                 // in paise
+  currency               String              @default("INR")
+
+  cancelledAt            DateTime?
+  endedAt                DateTime?
+
+  createdAt              DateTime            @default(now())
+  updatedAt              DateTime            @updatedAt
+
+  entitlements           AutomationEntitlement[]
+
+  @@index([clerkUserId, automationId])
+  @@index([razorpaySubscriptionId])
+}
+
+model ProcessedWebhookEvent {
+  id          String   @id @default(cuid())
+  eventId     String   @unique
+  eventType   String
+  payload     Json?
+  processedAt DateTime @default(now())
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// CHOWDHURY DUO SECURE INTEGRATION GATEWAY & OAUTH INFRASTRUCTURE
+// ─────────────────────────────────────────────────────────────────────────────
+
+enum IntegrationProvider {
+  GOOGLE
+  SLACK
+  MICROSOFT
+  NOTION
+}
+
+enum ConnectionStatus {
+  CONNECTED
+  DISCONNECTED
+  EXPIRED
+  ERROR
+}
+
+enum GrantStatus {
+  ISSUED
+  PROCESSING
+  SUCCEEDED
+  FAILED
+  EXPIRED
+}
+
+enum GatewayOperationStatus {
+  PENDING
+  SUCCEEDED
+  FAILED
+}
+
+model IntegrationConnection {
+  id                    String              @id @default(cuid())
+  clerkUserId           String
+  provider              IntegrationProvider
+  providerAccountId     String
+  accountEmail          String?
+  accountName           String?
+  accountAvatarUrl      String?
+
+  accessTokenEncrypted  String              @db.Text
+  accessTokenIv         String
+  accessTokenAuthTag    String
+
+  refreshTokenEncrypted String              @db.Text
+  refreshTokenIv        String
+  refreshTokenAuthTag   String
+
+  vaultVersion          Int                 @default(1)
+  tokenExpiresAt        DateTime
+  scopes                String[]
+
+  status                ConnectionStatus    @default(CONNECTED)
+  lastRefreshedAt       DateTime            @default(now())
+  errorMessage          String?
+
+  refreshLockUntil      DateTime?
+  refreshLockToken      String?
+  tokenVersion          Int                 @default(1)
+
+  createdAt             DateTime            @default(now())
+  updatedAt             DateTime            @updatedAt
+
+  userAutomations       UserAutomationIntegration[]
+  executionGrants       AutomationExecutionGrant[]
+  gmailWatchSubscription GmailWatchSubscription?
+
+  @@unique([clerkUserId, provider, providerAccountId])
+  @@index([clerkUserId, provider, status])
+  @@index([tokenExpiresAt])
+}
+
+model UserAutomationIntegration {
+  id                      String                @id @default(cuid())
+  userAutomationId        String
+  integrationConnectionId String
+  role                    String
+
+  userAutomation          UserAutomation        @relation(fields: [userAutomationId], references: [id], onDelete: Cascade)
+  integrationConnection   IntegrationConnection @relation(fields: [integrationConnectionId], references: [id], onDelete: Restrict)
+
+  createdAt               DateTime              @default(now())
+  updatedAt               DateTime              @updatedAt
+
+  @@unique([userAutomationId, role])
+  @@index([integrationConnectionId])
+}
+
+model AutomationExecutionGrant {
+  id                      String                @id @default(cuid())
+  grantTokenHash          String                @unique
+  clerkUserId             String
+  userAutomationId        String
+  userAutomation          UserAutomation        @relation(fields: [userAutomationId], references: [id], onDelete: Cascade)
+  automationExecutionId   String
+  automationExecution     AutomationExecution   @relation(fields: [automationExecutionId], references: [id], onDelete: Cascade)
+  integrationConnectionId String
+  integrationConnection   IntegrationConnection @relation(fields: [integrationConnectionId], references: [id], onDelete: Restrict)
+  allowedCapability       String
+  status                  GrantStatus           @default(ISSUED)
+  expiresAt               DateTime
+  consumedAt              DateTime?
+  consumedByIp            String?
+  processingStartedAt     DateTime?
+  createdAt               DateTime              @default(now())
+
+  @@index([expiresAt])
+  @@index([clerkUserId])
+}
+
+model OAuthAuthorizationSession {
+  id               String   @id @default(cuid())
+  stateNonceHash   String   @unique
+  clerkUserId      String
+  codeVerifierEnc  String   @db.Text
+  codeVerifierIv   String
+  codeVerifierTag  String
+  userAutomationId String?
+  returnUrl        String
+  expiresAt        DateTime
+  createdAt        DateTime @default(now())
+
+  @@index([expiresAt])
+  @@index([clerkUserId])
+}
+
+model AutomationGatewayOperation {
+  id                    String                 @id @default(cuid())
+  idempotencyKey        String                 @unique
+  automationExecutionId String
+  automationExecution   AutomationExecution    @relation(fields: [automationExecutionId], references: [id], onDelete: Cascade)
+  clerkUserId           String
+  action                String
+  status                GatewayOperationStatus @default(PENDING)
+  gmailMessageId        String?
+  gmailThreadId         String?
+  sanitizedResponse     Json?
+  errorCode             String?
+  createdAt             DateTime               @default(now())
+  updatedAt             DateTime               @updatedAt
+
+  @@index([automationExecutionId])
+  @@index([clerkUserId])
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// AI SUPPORT GMAIL AUTOMATION & KNOWLEDGE BASE
+// Inbound Gmail Pub/Sub Watch, Tenant RAG & Human Escalations
+// ─────────────────────────────────────────────────────────────────────────────
+
+model GmailWatchSubscription {
+  id                      String                @id @default(cuid())
+  clerkUserId             String
+  integrationConnectionId String                @unique
+  integrationConnection   IntegrationConnection @relation(fields: [integrationConnectionId], references: [id], onDelete: Cascade)
+  resourceId              String
+  historyId               String
+  expiration              DateTime
+  createdAt               DateTime              @default(now())
+  updatedAt               DateTime              @updatedAt
+
+  @@index([clerkUserId])
+  @@index([expiration])
+}
+
+model ProcessedGmailEvent {
+  id           String   @id @default(cuid())
+  clerkUserId  String
+  emailAddress String
+  historyId    String
+  messageId    String?
+  processedAt  DateTime @default(now())
+
+  @@unique([emailAddress, historyId])
+  @@index([clerkUserId])
+  @@index([processedAt])
+}
+
+enum KnowledgeStatus {
+  PROCESSING
+  READY
+  FAILED
+}
+
+model KnowledgeDocument {
+  id           String           @id @default(cuid())
+  clerkUserId  String
+  title        String
+  fileType     String
+  fileSize     Int
+  status       KnowledgeStatus  @default(PROCESSING)
+  errorMessage String?
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+
+  chunks       KnowledgeChunk[]
+
+  @@index([clerkUserId])
+}
+
+model KnowledgeChunk {
+  id          String            @id @default(cuid())
+  clerkUserId String
+  documentId  String
+  document    KnowledgeDocument @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  chunkIndex  Int
+  content     String            @db.Text
+  tokenCount  Int
+  createdAt   DateTime          @default(now())
+
+  @@index([clerkUserId])
+  @@index([documentId])
+}
+
+enum ConversationStatus {
+  AUTO_REPLIED
+  PENDING_APPROVAL
+  RESOLVED
+  DISMISSED
+}
+
+enum MessageRole {
+  CUSTOMER
+  AI_DRAFT
+  SENT_REPLY
+  HUMAN_REPLY
+}
+
+model SupportConversation {
+  id               String              @id @default(cuid())
+  clerkUserId      String
+  userAutomationId String
+  userAutomation   UserAutomation      @relation(fields: [userAutomationId], references: [id], onDelete: Cascade)
+  gmailThreadId    String
+  subject          String
+  customerEmail    String
+  customerName     String?
+  status           ConversationStatus  @default(PENDING_APPROVAL)
+  confidenceScore  Float?
+  category         String?
+  lastMessageAt    DateTime            @default(now())
+  createdAt        DateTime            @default(now())
+  updatedAt        DateTime            @updatedAt
+
+  messages         SupportMessage[]
+
+  @@unique([userAutomationId, gmailThreadId])
+  @@index([clerkUserId, status])
+}
+
+model SupportMessage {
+  id             String              @id @default(cuid())
+  conversationId String
+  conversation   SupportConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  gmailMessageId String?
+  role           MessageRole
+  content        String              @db.Text
+  rawAiOutput    Json?
+  reasoning      String?
+  sentAt         DateTime?
+  createdAt      DateTime            @default(now())
+
+  @@index([conversationId])
+}
+
+
+

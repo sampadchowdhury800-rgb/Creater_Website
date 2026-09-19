@@ -1,0 +1,27 @@
+# Supabase project configuration
+project_id = "gmail-ai-customer-support"
+
+[api]
+enabled = true
+port = 54321
+schemas = ["public", "graphql_public"]
+extra_search_path = ["public", "extensions"]
+max_rows = 1000
+
+[db]
+port = 54322
+
+# gmail-check: the scheduled Gmail inbox poller (called by pg_cron).
+# No JWT verification — scheduled calls come from pg_net inside the database.
+[functions.gmail-check]
+verify_jwt = false
+
+# gmail-process: core AI pipeline. Called internally by gmail-check.
+# Requires service_role key or valid JWT.
+[functions.gmail-process]
+verify_jwt = true
+
+# gmail-oauth: handles OAuth authorize + callback for connecting Gmail accounts.
+# No JWT verification — users reach this before authentication.
+[functions.gmail-oauth]
+verify_jwt = false
